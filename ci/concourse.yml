@@ -15,12 +15,16 @@ resources:
     password: ((docker_password))
 
 jobs:
-- name: build-resource-image
+- name: build
   plan:
-  - get: source-code
-    trigger: true
-  - task: build-resource
-    file: source-code/ci/tasks/build-resource.yml
+  - aggregate:
+    - get: source-code
+      trigger: true
+    - get: alpine-edge
+      trigger: true
+      params:
+        save: true
   - put: docker-hub
     params:
-      build: build-output
+      build: source-code
+      load_base: alpine-edge
