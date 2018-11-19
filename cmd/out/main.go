@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/burdzwastaken/concourse-spinnaker-resource/concourse"
+	"github.com/pivotal-cf/spinnaker-resource/concourse"
 )
 
 var (
