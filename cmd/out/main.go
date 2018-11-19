@@ -21,8 +21,10 @@ var (
 
 func main() {
 	var request concourse.OutRequest
-
 	concourse.ReadRequest(&request)
+
+	fmt.Printf("********************Request object: %+v\n", request)
+	fmt.Printf("********************Stdin Request: %+v\n", request)
 
 	cert, err := tls.X509KeyPair([]byte(request.Source.X509Cert), []byte(request.Source.X509Key))
 	if err != nil {
@@ -59,9 +61,10 @@ func main() {
 	concourse.Sayf("Executing pipeline: '%s'\n", url)
 
 	output := concourse.OutResponse{}
-	if spinnaker, err := client.Post(url, "application/json", bytes.NewBuffer(TriggerParams)); err != nil {
+	if spinnaker, err := client.Post(url, "application/json", bytes.NewBuffer(TriggerParams)); err != nil || spinnaker.StatusCode >= 400 {
 		concourse.Fatal("Unable to start pipeline because:\n%v\n", err)
 	} else {
+		fmt.Printf("********************%+v\n", spinnaker)
 		body, err := ioutil.ReadAll(spinnaker.Body)
 		err = json.Unmarshal([]byte(body), &Data)
 		if err != nil {
