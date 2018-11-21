@@ -23,9 +23,6 @@ func main() {
 	var request concourse.OutRequest
 	concourse.ReadRequest(&request)
 
-	fmt.Printf("********************Request object: %+v\n", request)
-	fmt.Printf("********************Stdin Request: %+v\n", request)
-
 	cert, err := tls.X509KeyPair([]byte(request.Source.X509Cert), []byte(request.Source.X509Key))
 	if err != nil {
 		concourse.Fatal("Error reading X509 key pair: \n%v\n", err)
@@ -61,11 +58,19 @@ func main() {
 	concourse.Sayf("Executing pipeline: '%s'\n", url)
 
 	output := concourse.OutResponse{}
-	if spinnaker, err := client.Post(url, "application/json", bytes.NewBuffer(TriggerParams)); err != nil || spinnaker.StatusCode >= 400 {
-		concourse.Fatal("Unable to start pipeline because:\n%v\n", err)
+	if response, err := client.Post(url, "application/json", bytes.NewBuffer(TriggerParams)); err != nil {
+		concourse.Fatal("failed to execute pipeline:\n", err)
+	} else if response.StatusCode >= 400 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err == nil {
+			err = fmt.Errorf("status code: %d, body: %s", response.StatusCode, string(body))
+		}
+		concourse.Fatal("failed to execute pipeline:\n", err)
 	} else {
-		fmt.Printf("********************%+v\n", spinnaker)
-		body, err := ioutil.ReadAll(spinnaker.Body)
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			concourse.Fatal("unable to read response from Spinnaker, status code: "+string(response.StatusCode), err)
+		}
 		err = json.Unmarshal([]byte(body), &Data)
 		if err != nil {
 			concourse.Fatal("Unable to parse JSON response because:\n%v\n", err)
