@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 
 	"github.com/pivotal-cf/spinnaker-resource/concourse"
+	"github.com/pivotal-cf/spinnaker-resource/spinnaker"
 )
 
 var (
@@ -23,25 +19,10 @@ func main() {
 	var request concourse.OutRequest
 	concourse.ReadRequest(&request)
 
-	cert, err := tls.X509KeyPair([]byte(request.Source.X509Cert), []byte(request.Source.X509Key))
+	spinClient, err := spinnaker.NewClient(request.Source)
 	if err != nil {
-		concourse.Fatal("Error reading X509 key pair: \n%v\n", err)
+		concourse.Fatal("put step failed ", err)
 	}
-
-	tlsConfig := &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		Certificates:             []tls.Certificate{cert},
-		InsecureSkipVerify:       true,
-	}
-
-	tr := &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
-
-	client := &http.Client{Transport: tr}
-
-	url := fmt.Sprintf("%s/pipelines/%s/%s", request.Source.SpinnakerAPI, request.Source.SpinnakerApplication, request.Source.SpinnakerPipeline)
 
 	if len(request.Params.TriggerParams) == 0 {
 		TriggerParams = []byte(`{"type": "concourse-resource"}`)
@@ -55,29 +36,15 @@ func main() {
 		TriggerParams = []byte(`{"type": "concourse-resource", "parameters": {` + paramsText + `}}`)
 	}
 
-	concourse.Sayf("Executing pipeline: '%s'\n", url)
+	concourse.Sayf("Executing pipeline: '%s/%s'\n", request.Source.SpinnakerApplication, request.Source.SpinnakerPipeline)
 
 	output := concourse.OutResponse{}
-	if response, err := client.Post(url, "application/json", bytes.NewBuffer(TriggerParams)); err != nil {
-		concourse.Fatal("failed to execute pipeline:\n", err)
-	} else if response.StatusCode >= 400 {
-		body, err := ioutil.ReadAll(response.Body)
-		if err == nil {
-			err = fmt.Errorf("status code: %d, body: %s", response.StatusCode, string(body))
-		}
-		concourse.Fatal("failed to execute pipeline:\n", err)
-	} else {
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			concourse.Fatal("unable to read response from Spinnaker, status code: "+string(response.StatusCode), err)
-		}
-		err = json.Unmarshal([]byte(body), &Data)
-		if err != nil {
-			concourse.Fatal("Unable to parse JSON response because:\n%v\n", err)
-		}
-		output.Version = concourse.Version{
-			ExecutionID: strings.Split(Data["ref"].(string), "/")[2],
-		}
+	pipelineExecution, err := spinClient.InvokePipelineExecution(TriggerParams)
+	if err != nil {
+		concourse.Fatal("put step failed ", err)
+	}
+	output.Version = concourse.Version{
+		Ref: pipelineExecution.ID,
 	}
 
 	concourse.Sayf("Pipeline executed successfully")

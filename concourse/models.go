@@ -9,7 +9,7 @@ type Source struct {
 }
 
 type Version struct {
-	ExecutionID string `json:"execution_id,omitempty"` // optional
+	Ref string `json:"ref"`
 }
 
 type MetadataPair struct {
@@ -21,6 +21,11 @@ type OutParams struct {
 	TriggerParams map[string]string `json:"trigger_params,omitempty"` // optional
 }
 
+type CheckRequest struct {
+	Source  Source `json:"source"`
+	Version `json:"version"`
+}
+
 type OutRequest struct {
 	Source Source    `json:"source"`
 	Params OutParams `json:"params"`
@@ -30,3 +35,6 @@ type OutResponse struct {
 	Version  Version        `json:"version"`
 	Metadata []MetadataPair `json:"metadata"`
 }
+
+type CheckResponse []Version
+

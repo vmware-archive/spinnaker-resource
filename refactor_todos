@@ -1,0 +1,15 @@
+x- cleanup models
+xx- cleanup functions
+
+xxx- add a common spinnaker client
+x- dry up test code
+remove dependency between spinnaker client & concourse client
+
+
+
+
+
+26/11 todo:
+- check step, step 2 (some versions exist)
+- backfill tests
+
