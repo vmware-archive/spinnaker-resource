@@ -21,30 +21,32 @@ func main() {
 	if err != nil {
 		concourse.Fatal("check step failed ", err)
 	}
-
+	pipelineExecutions := make([]spinnaker.PipelineExecution, 1)
+	for _, execution := range Data {
+		if execution.Name == request.Source.SpinnakerPipeline {
+			pipelineExecutions = append(pipelineExecutions, execution)
+		}
+	}
 	//Sort Data by build time Asc
-	sort.Slice(Data, func(i, j int) bool {
-		return Data[i].BuildTime < Data[j].BuildTime
+	sort.Slice(pipelineExecutions, func(i, j int) bool {
+		return pipelineExecutions[i].BuildTime < pipelineExecutions[j].BuildTime
 	})
 
 	//find the input ExecutionID
-	refLoc := sort.Search(len(Data), func(i int) bool {
-		return Data[i].ID == request.Version.Ref
+	refLoc := sort.Search(len(pipelineExecutions), func(i int) bool {
+		return pipelineExecutions[i].ID == request.Version.Ref
 	})
 
 	// i is the latest element unless the executionId exists
-	i := len(Data) - 1
-	if refLoc < len(Data) {
+	i := len(pipelineExecutions) - 1
+	if refLoc < len(pipelineExecutions) {
 		i = refLoc
 	}
 
-	//loop from the input execution onwards
-	//loop will just use the last element if input execution is not found
+	//loop from the input execution onwards loop will just use the last element if input execution is not found
 	var res concourse.CheckResponse
-	for ; i < len(Data); i++ {
-		if Data[i].Name == request.Source.SpinnakerPipeline {
-			res = append(res, concourse.Version{Ref: Data[i].ID})
-		}
+	for ; i < len(pipelineExecutions); i++ {
+		res = append(res, concourse.Version{Ref: pipelineExecutions[i].ID})
 	}
 	concourse.WriteCheckResponse(res)
 }

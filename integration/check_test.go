@@ -22,37 +22,70 @@ import (
 
 var _ = Describe("Check", func() {
 	var (
-		applicationName, pipelineName                              string
-		responseMap                                                []map[string]interface{}
-		input                                                      concourse.CheckRequest
-		marshalledInput                                            []byte
-		err                                                        error
-		statusCode                                                 int
-		pipelineExecution1, pipelineExecution2, pipelineExecution3 map[string]interface{}
-		checkResponse                                              []concourse.Version
-		allHandler                                                 http.HandlerFunc
-		inputRef                                                   string
-		checkSess                                                  *gexec.Session
+		applicationName, pipelineName string
+		responseMap                   []map[string]interface{}
+		input                         concourse.CheckRequest
+		marshalledInput               []byte
+		err                           error
+		statusCode                    int
+		pipelineExecutions            []map[string]interface{}
+		checkResponse                 []concourse.Version
+		allHandler                    http.HandlerFunc
+		inputRef                      string
+		checkSess                     *gexec.Session
 	)
 	pipelineName = "foo"
 	applicationName = "bar"
-	pipelineExecution1 = map[string]interface{}{
-		"id":        "EX1",
-		"name":      pipelineName,
-		"buildTime": 1543244670,
-	}
-	pipelineExecution2 = map[string]interface{}{
-		"id":        "EX2",
-		"name":      pipelineName,
-		"buildTime": 1543244680,
-	}
-	pipelineExecution3 = map[string]interface{}{
-		"id":        "EX3",
-		"name":      pipelineName,
-		"buildTime": 1543244690,
+	pipelineExecutions = []map[string]interface{}{
+		map[string]interface{}{
+			"id":        "EX1",
+			"name":      pipelineName,
+			"buildTime": 1543244670,
+		},
+		map[string]interface{}{
+			"id":        "EX2",
+			"name":      pipelineName,
+			"buildTime": 1543244680,
+		},
+		map[string]interface{}{
+			"id":        "EX3",
+			"name":      pipelineName,
+			"buildTime": 1543244690,
+		},
+		map[string]interface{}{
+			"id":        "EX4",
+			"name":      "other-pipeline",
+			"buildTime": 1543244690,
+		},
+		map[string]interface{}{
+			"id":        "EX5",
+			"name":      "other-pipeline",
+			"buildTime": 1543244690,
+		},
 	}
 	JustBeforeEach(func() {
 		spinnakerServer.AppendHandlers(
+			ghttp.CombineHandlers(
+				ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName)),
+				ghttp.RespondWithJSONEncoded(
+					statusCode,
+					map[string]interface{}{
+						"attributes": map[string]interface{}{
+							"accounts": nil,
+							"name":     applicationName,
+						},
+						"clusters": nil,
+						"name":     applicationName,
+					},
+				)),
+			ghttp.CombineHandlers(
+				ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelineConfigs")),
+				ghttp.RespondWithJSONEncoded(
+					statusCode,
+					[]map[string]string{
+						{"name": pipelineName},
+					},
+				)),
 			allHandler,
 		)
 		input = concourse.CheckRequest{
@@ -82,17 +115,13 @@ var _ = Describe("Check", func() {
 				ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelines"), "limit=25"),
 				ghttp.RespondWithJSONEncoded(
 					statusCode,
-					[]map[string]interface{}{
-						pipelineExecution1,
-						pipelineExecution2,
-						pipelineExecution3,
-					},
+					pipelineExecutions,
 				),
 			)
 		})
 		Context("when input version exists but not the latest version", func() {
 			BeforeEach(func() {
-				inputRef = pipelineExecution2["id"].(string)
+				inputRef = pipelineExecutions[1]["id"].(string)
 			})
 			It("returns the input version and every version that follows", func() {
 				Expect(checkSess.ExitCode()).To(Equal(0))
@@ -100,14 +129,14 @@ var _ = Describe("Check", func() {
 				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(checkResponse)).To(Equal(2))
-				Expect(checkResponse[0].Ref).To(Equal(pipelineExecution2["id"].(string)))
-				Expect(checkResponse[1].Ref).To(Equal(pipelineExecution3["id"].(string)))
+				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
+				Expect(checkResponse[1].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
 			})
 		})
 
 		Context("when input version is the latest version", func() {
 			BeforeEach(func() {
-				inputRef = pipelineExecution3["id"].(string)
+				inputRef = pipelineExecutions[2]["id"].(string)
 			})
 			It("returns the only the input version", func() {
 				Expect(checkSess.ExitCode()).To(Equal(0))
@@ -115,12 +144,12 @@ var _ = Describe("Check", func() {
 				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(checkResponse)).To(Equal(1))
-				Expect(checkResponse[0].Ref).To(Equal(pipelineExecution3["id"].(string)))
+				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
 			})
 		})
 		Context("when input version doesn't exist anymore", func() {
 			BeforeEach(func() {
-				inputRef = pipelineExecution1["id"].(string)
+				inputRef = pipelineExecutions[0]["id"].(string)
 			})
 			It("returns the only the input version", func() {
 				Expect(checkSess.ExitCode()).To(Equal(0))
@@ -128,7 +157,7 @@ var _ = Describe("Check", func() {
 				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(checkResponse)).To(Equal(1))
-				Expect(checkResponse[0].Ref).To(Equal(pipelineExecution3["id"].(string)))
+				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
 			})
 		})
 	})
@@ -138,8 +167,10 @@ var _ = Describe("Check", func() {
 			pipelineName = "foo"
 			applicationName = "bar"
 			responseMap = []map[string]interface{}{
-				pipelineExecution1,
-				pipelineExecution2,
+				pipelineExecutions[0],
+				pipelineExecutions[1],
+				pipelineExecutions[3],
+				pipelineExecutions[4],
 			}
 			statusCode = 200
 			allHandler = ghttp.CombineHandlers(
@@ -156,7 +187,7 @@ var _ = Describe("Check", func() {
 			err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(checkResponse)).To(Equal(1))
-			Expect(checkResponse[0].Ref).To(Equal(pipelineExecution2["id"].(string)))
+			Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
 		})
 	})
 })

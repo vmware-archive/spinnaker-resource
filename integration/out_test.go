@@ -30,6 +30,27 @@ var _ = Describe("Out", func() {
 	JustBeforeEach(func() {
 		spinnakerServer.AppendHandlers(
 			ghttp.CombineHandlers(
+				ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName)),
+				ghttp.RespondWithJSONEncoded(
+					200,
+					map[string]interface{}{
+						"attributes": map[string]interface{}{
+							"accounts": nil,
+							"name":     applicationName,
+						},
+						"clusters": nil,
+						"name":     applicationName,
+					},
+				)),
+			ghttp.CombineHandlers(
+				ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelineConfigs")),
+				ghttp.RespondWithJSONEncoded(
+					200,
+					[]map[string]string{
+						{"name": pipelineName},
+					},
+				)),
+			ghttp.CombineHandlers(
 				ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+applicationName+"/"+pipelineName+".*")),
 				ghttp.RespondWithJSONEncoded(
 					statusCode,
