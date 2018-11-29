@@ -13,14 +13,11 @@ func main() {
 	concourse.ReadCheckRequest(&request)
 
 	spinClient, err := spinnaker.NewClient(request.Source)
-	if err != nil {
-		concourse.Fatal("check step failed ", err)
-	}
+	concourse.Check("check", err)
 
 	Data, err := spinClient.GetPipelineExecutions()
-	if err != nil {
-		concourse.Fatal("check step failed ", err)
-	}
+	concourse.Check("check", err)
+
 	pipelineExecutions := make([]spinnaker.PipelineExecution, 1)
 	for _, execution := range Data {
 		if execution.Name == request.Source.SpinnakerPipeline {

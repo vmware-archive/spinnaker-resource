@@ -1,9 +1,3 @@
-/*
-- input nil, output current version
-- input version that is latest, output array with the  same version only.
-- input version that exists but not latest, output array with the same version and all the versions that follow.
-- input version that doesn't exist anymore, output the current version
-*/
 package integration_test
 
 import (

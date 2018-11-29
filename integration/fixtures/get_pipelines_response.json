@@ -1,0 +1,108 @@
+{
+  "application": "nvidia",
+  "authentication": {
+    "allowedAccounts": [
+      "my-kubernetes-account"
+    ],
+    "user": "spincon"
+  },
+  "buildTime": 1543414041348,
+  "canceled": false,
+  "endTime": 1543414041439,
+  "id": "01CXDAAJR4G27W7T01M6BA6H1E",
+  "initialConfig": {
+  },
+  "keepWaitingPipelines": false,
+  "limitConcurrent": true,
+  "name": "bar",
+  "notifications": [
+  ],
+  "origin": "api",
+  "pipelineConfigId": "f6f11e84-be2c-441a-bd8a-f95827b5590f",
+  "stages": [
+    {
+      "context": {
+        "context": {
+          "expression": true,
+          "expressionResult": "true"
+        },
+        "failPipeline": true,
+        "preconditionType": "expression",
+        "type": "checkPreconditions"
+      },
+      "endTime": 1543414041413,
+      "id": "01CXDAAJRVWCCB5B9SDCE7T9YW",
+      "name": "Check precondition (expression)",
+      "outputs": {
+      },
+      "parentStageId": "01CXDAAJR41KJTFHWC1D3759K2",
+      "refId": "1<1",
+      "requisiteStageRefIds": [
+      ],
+      "startTime": 1543414041383,
+      "status": "SUCCEEDED",
+      "syntheticStageOwner": "STAGE_BEFORE",
+      "tasks": [
+        {
+          "endTime": 1543414041409,
+          "id": "1",
+          "implementingClass": "com.netflix.spinnaker.orca.pipeline.tasks.ExpressionPreconditionTask",
+          "loopEnd": false,
+          "loopStart": false,
+          "name": "checkPrecondition",
+          "stageEnd": true,
+          "stageStart": true,
+          "startTime": 1543414041387,
+          "status": "SUCCEEDED"
+        }
+      ],
+      "type": "checkPreconditions"
+    },
+    {
+      "context": {
+        "preconditions": [
+          {
+            "context": {
+              "expression": true
+            },
+            "failPipeline": true,
+            "type": "expression"
+          }
+        ]
+      },
+      "endTime": 1543414041423,
+      "id": "01CXDAAJR41KJTFHWC1D3759K2",
+      "name": "Check Preconditions",
+      "outputs": {
+      },
+      "refId": "1",
+      "requisiteStageRefIds": [
+      ],
+      "startTime": 1543414041372,
+      "status": "SUCCEEDED",
+      "tasks": [
+      ],
+      "type": "checkPreconditions"
+    }
+  ],
+  "startTime": 1543414041364,
+  "status": "SUCCEEDED",
+  "systemNotifications": [
+  ],
+  "trigger": {
+    "artifacts": [
+    ],
+    "dryRun": false,
+    "notifications": [
+    ],
+    "parameters": {
+    },
+    "rebake": false,
+    "resolvedExpectedArtifacts": [
+    ],
+    "strategy": false,
+    "type": "concourse-resource",
+    "user": "spincon"
+  },
+  "type": "PIPELINE"
+}

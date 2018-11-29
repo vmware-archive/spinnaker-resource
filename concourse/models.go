@@ -25,7 +25,11 @@ type CheckRequest struct {
 	Source  Source `json:"source"`
 	Version `json:"version"`
 }
-
+type InRequest struct {
+	Source  Source    `json:"source"`
+	Version Version   `json:"version"`
+	Params  OutParams `json:"params"`
+}
 type OutRequest struct {
 	Source Source    `json:"source"`
 	Params OutParams `json:"params"`
@@ -38,3 +42,20 @@ type OutResponse struct {
 
 type CheckResponse []Version
 
+type InResponseMetadataKV struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type IntermediateMetadata struct {
+	PipelineName    string `json:"name"`
+	ApplicationName string `json:"application"`
+	StartTime       int64  `json:"startTime"`
+	EndTime         int64  `json:"endTime"`
+	Status          string `json:"status"`
+}
+
+type InResponse struct {
+	Version  `json:"version"`
+	Metadata []InResponseMetadataKV `json:"metadata"`
+}

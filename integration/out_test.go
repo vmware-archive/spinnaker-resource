@@ -117,7 +117,7 @@ var _ = Describe("Out", func() {
 			<-outSess.Exited
 			Expect(outSess.ExitCode()).To(Equal(1))
 
-			Expect(outSess.Err).To(gbytes.Say("error put step failed :"))
+			Expect(outSess.Err).To(gbytes.Say("error put step failed:"))
 			Expect(outSess.Err).To(gbytes.Say("spinnaker api responded with status code: " + strconv.Itoa(statusCode)))
 			responseString, err := json.Marshal(responseMap)
 			Expect(err).ToNot(HaveOccurred())

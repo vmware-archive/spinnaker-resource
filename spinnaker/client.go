@@ -92,6 +92,41 @@ func NewClient(source concourse.Source) (SpinClient, error) {
 	return spinClient, nil
 }
 
+func (c *SpinClient) GetPipeline(pipelineID string) (map[string]interface{}, error) {
+	var pipelineExecutionMetadata map[string]interface{}
+	bytes, err := c.GetPipelineRaw(pipelineID)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(bytes, &pipelineExecutionMetadata)
+	if err != nil {
+		return nil, err
+	}
+	return pipelineExecutionMetadata, nil
+}
+
+func (c *SpinClient) GetPipelineRaw(pipelineID string) ([]byte, error) {
+	url := fmt.Sprintf("%s/pipelines/%s", c.sourceConfig.SpinnakerAPI, pipelineID)
+	response, err := c.client.Get(url)
+	if err != nil {
+		return nil, err
+	} else if response.StatusCode == 404 {
+		err = fmt.Errorf("pipeline execution ID not found (ID: %s)", pipelineID)
+		return nil, err
+	} else if response.StatusCode >= 400 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err == nil {
+			err = fmt.Errorf("spinnaker api responded with status code: %d, body: %s", response.StatusCode, string(body))
+		}
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(body), nil
+}
+
 //returns the last 25 spinnaker pipeline executions
 func (c *SpinClient) GetPipelineExecutions() ([]PipelineExecution, error) {
 	var pipelineExecutions []PipelineExecution

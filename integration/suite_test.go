@@ -60,8 +60,8 @@ JBf0Z15NGOY3w9KSxeiTPFyXU4/RmymDzyd/VKcnPBMKqTvbqT2G
 -----END RSA PRIVATE KEY-----`
 
 var (
-	outPath, checkPath string
-	spinnakerServer    *ghttp.Server
+	outPath, checkPath, inPath string
+	spinnakerServer            *ghttp.Server
 )
 
 func TestIntegration(t *testing.T) {
@@ -74,12 +74,15 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).NotTo(HaveOccurred())
 	checkBinPath, err := gexec.Build("github.com/pivotal-cf/spinnaker-resource/cmd/check")
 	Expect(err).NotTo(HaveOccurred())
+	inBinPath, err := gexec.Build("github.com/pivotal-cf/spinnaker-resource/cmd/in")
+	Expect(err).NotTo(HaveOccurred())
 
-	return []byte(outBinPath + "," + checkBinPath)
+	return []byte(outBinPath + "," + checkBinPath + "," + inBinPath)
 }, func(data []byte) {
 	paths := strings.Split(string(data), ",")
 	outPath = paths[0]
 	checkPath = paths[1]
+	inPath = paths[2]
 
 	SetDefaultEventuallyTimeout(10 * time.Second)
 })

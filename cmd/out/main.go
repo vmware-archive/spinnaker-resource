@@ -20,9 +20,7 @@ func main() {
 	concourse.ReadRequest(&request)
 
 	spinClient, err := spinnaker.NewClient(request.Source)
-	if err != nil {
-		concourse.Fatal("put step failed ", err)
-	}
+	concourse.Check("put", err)
 
 	if len(request.Params.TriggerParams) == 0 {
 		TriggerParams = []byte(`{"type": "concourse-resource"}`)
@@ -40,9 +38,8 @@ func main() {
 
 	output := concourse.OutResponse{}
 	pipelineExecution, err := spinClient.InvokePipelineExecution(TriggerParams)
-	if err != nil {
-		concourse.Fatal("put step failed ", err)
-	}
+	concourse.Check("put", err)
+
 	output.Version = concourse.Version{
 		Ref: pipelineExecution.ID,
 	}
