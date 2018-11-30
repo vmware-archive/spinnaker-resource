@@ -27,6 +27,7 @@ var _ = Describe("Check", func() {
 		allHandler                    http.HandlerFunc
 		inputRef                      string
 		checkSess                     *gexec.Session
+		statuses                      []string
 	)
 	pipelineName = "foo"
 	applicationName = "bar"
@@ -35,26 +36,31 @@ var _ = Describe("Check", func() {
 			"id":        "EX1",
 			"name":      pipelineName,
 			"buildTime": 1543244670,
+			"status":    "SUCCEEDED",
 		},
 		map[string]interface{}{
 			"id":        "EX2",
 			"name":      pipelineName,
 			"buildTime": 1543244680,
+			"status":    "SUCCEEDED",
 		},
 		map[string]interface{}{
 			"id":        "EX3",
 			"name":      pipelineName,
 			"buildTime": 1543244690,
+			"status":    "TERMINAL",
 		},
 		map[string]interface{}{
 			"id":        "EX4",
 			"name":      "other-pipeline",
 			"buildTime": 1543244690,
+			"status":    "SUCCEEDED",
 		},
 		map[string]interface{}{
 			"id":        "EX5",
 			"name":      "other-pipeline",
 			"buildTime": 1543244690,
+			"status":    "SUCCEEDED",
 		},
 	}
 	JustBeforeEach(func() {
@@ -87,6 +93,7 @@ var _ = Describe("Check", func() {
 				SpinnakerAPI:         spinnakerServer.URL(),
 				SpinnakerApplication: applicationName,
 				SpinnakerPipeline:    pipelineName,
+				Statuses:             statuses,
 				X509Cert:             serverCert,
 				X509Key:              serverKey,
 			},
@@ -113,45 +120,78 @@ var _ = Describe("Check", func() {
 				),
 			)
 		})
-		Context("when input version exists but not the latest version", func() {
+		Context("when statuses are specified in the resource params", func() {
 			BeforeEach(func() {
-				inputRef = pipelineExecutions[1]["id"].(string)
+				inputRef = pipelineExecutions[0]["id"].(string)
+				statuses = []string{"SUCCEEDED"}
 			})
-			It("returns the input version and every version that follows", func() {
+
+			It("returns the versions that match the provided statuses", func() {
 				Expect(checkSess.ExitCode()).To(Equal(0))
 
 				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(checkResponse)).To(Equal(2))
-				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
-				Expect(checkResponse[1].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
+				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[0]["id"].(string)))
+				Expect(checkResponse[1].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
 			})
 		})
+		Context("when statuses are not specified in the resource params", func() {
+			Context("when input version exists but not the latest version", func() {
+				BeforeEach(func() {
+					inputRef = pipelineExecutions[1]["id"].(string)
+					statuses = []string{}
+				})
+				It("returns the input version and every version that follows", func() {
+					Expect(checkSess.ExitCode()).To(Equal(0))
 
-		Context("when input version is the latest version", func() {
-			BeforeEach(func() {
-				inputRef = pipelineExecutions[2]["id"].(string)
+					err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(checkResponse)).To(Equal(2))
+					Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
+					Expect(checkResponse[1].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
+				})
 			})
-			It("returns the only the input version", func() {
-				Expect(checkSess.ExitCode()).To(Equal(0))
 
-				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(len(checkResponse)).To(Equal(1))
-				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
-			})
-		})
-		Context("when input version doesn't exist anymore", func() {
-			BeforeEach(func() {
-				inputRef = pipelineExecutions[0]["id"].(string)
-			})
-			It("returns the only the input version", func() {
-				Expect(checkSess.ExitCode()).To(Equal(0))
+			Context("when input version is the latest version", func() {
+				BeforeEach(func() {
+					inputRef = pipelineExecutions[2]["id"].(string)
+					statuses = []string{}
+				})
+				It("returns the only the input version", func() {
+					Expect(checkSess.ExitCode()).To(Equal(0))
 
-				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(len(checkResponse)).To(Equal(1))
-				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
+					err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(checkResponse)).To(Equal(1))
+					Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
+				})
+			})
+			Context("when input version doesn't exist anymore", func() {
+				BeforeEach(func() {
+					responseMap = []map[string]interface{}{
+						pipelineExecutions[1],
+						pipelineExecutions[2],
+						pipelineExecutions[3],
+					}
+					allHandler = ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelines"), "limit=25"),
+						ghttp.RespondWithJSONEncoded(
+							statusCode,
+							responseMap,
+						),
+					)
+					inputRef = pipelineExecutions[0]["id"].(string)
+					statuses = []string{}
+				})
+				It("returns the only the input version", func() {
+					Expect(checkSess.ExitCode()).To(Equal(0))
+
+					err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(checkResponse)).To(Equal(1))
+					Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
+				})
 			})
 		})
 	})
@@ -163,9 +203,10 @@ var _ = Describe("Check", func() {
 			responseMap = []map[string]interface{}{
 				pipelineExecutions[0],
 				pipelineExecutions[1],
+				pipelineExecutions[2],
 				pipelineExecutions[3],
-				pipelineExecutions[4],
 			}
+			statuses = []string{}
 			statusCode = 200
 			allHandler = ghttp.CombineHandlers(
 				ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelines"), "limit=25"),
@@ -175,13 +216,73 @@ var _ = Describe("Check", func() {
 				),
 			)
 		})
-		It("returns the only the latest version to stdout", func() {
-			Expect(checkSess.ExitCode()).To(Equal(0))
+		Context("when statuses are specified", func() {
+			BeforeEach(func() {
+				statuses = []string{"SUCCEEDED"}
 
-			err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(checkResponse)).To(Equal(1))
-			Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
+			})
+			It("returns the only the latest version that mathces the specified statuses to stdout", func() {
+				Expect(checkSess.ExitCode()).To(Equal(0))
+
+				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(checkResponse)).To(Equal(1))
+				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[1]["id"].(string)))
+			})
+
+			Context("when pipeline executions does not have the status we are looking for", func() {
+				BeforeEach(func() {
+					statuses = []string{"FAILED"}
+				})
+
+				It("returns no versions", func() {
+					Expect(checkSess.ExitCode()).To(Equal(0))
+
+					err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(checkResponse)).To(Equal(0))
+				})
+			})
+		})
+		Context("when statuses are not specified", func() {
+			BeforeEach(func() {
+				statuses = []string{}
+			})
+
+			Context("when pipeline executions does not have the status we are looking for", func() {
+				BeforeEach(func() {
+					statusCode = 200
+
+					allHandler = ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelines"), "limit=25"),
+						ghttp.RespondWithJSONEncoded(
+							statusCode,
+							[]map[string]interface{}{
+								pipelineExecutions[3],
+								pipelineExecutions[4],
+							},
+						),
+					)
+				})
+
+				It("returns no versions", func() {
+					Expect(checkSess.ExitCode()).To(Equal(0))
+
+					err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(checkResponse)).To(Equal(0))
+				})
+			})
+
+			It("returns the only the latest version to stdout", func() {
+				Expect(checkSess.ExitCode()).To(Equal(0))
+
+				err = json.Unmarshal(checkSess.Out.Contents(), &checkResponse)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(len(checkResponse)).To(Equal(1))
+				Expect(checkResponse[0].Ref).To(Equal(pipelineExecutions[2]["id"].(string)))
+			})
 		})
 	})
 })

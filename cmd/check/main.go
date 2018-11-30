@@ -8,9 +8,8 @@ import (
 )
 
 func main() {
-
 	var request concourse.CheckRequest
-	concourse.ReadCheckRequest(&request)
+	concourse.ReadRequest(&request)
 
 	spinClient, err := spinnaker.NewClient(request.Source)
 	concourse.Check("check", err)
@@ -18,32 +17,64 @@ func main() {
 	Data, err := spinClient.GetPipelineExecutions()
 	concourse.Check("check", err)
 
-	pipelineExecutions := make([]spinnaker.PipelineExecution, 1)
-	for _, execution := range Data {
-		if execution.Name == request.Source.SpinnakerPipeline {
-			pipelineExecutions = append(pipelineExecutions, execution)
-		}
+	pipelineExecutions := FilterName(request.Source.SpinnakerPipeline, Data)
+
+	pipelineExecutions = FilterStatus(request.Source.Statuses, pipelineExecutions)
+
+	concourse.Sayf("pe: %d", len(pipelineExecutions))
+	if len(pipelineExecutions) <= 0 {
+		concourse.WriteResponse(concourse.CheckResponse{})
 	}
+
 	//Sort Data by build time Asc
 	sort.Slice(pipelineExecutions, func(i, j int) bool {
 		return pipelineExecutions[i].BuildTime < pipelineExecutions[j].BuildTime
 	})
 
-	//find the input ExecutionID
-	refLoc := sort.Search(len(pipelineExecutions), func(i int) bool {
-		return pipelineExecutions[i].ID == request.Version.Ref
-	})
-
-	// i is the latest element unless the executionId exists
-	i := len(pipelineExecutions) - 1
-	if refLoc < len(pipelineExecutions) {
-		i = refLoc
+	refLoc := len(pipelineExecutions) - 1
+	for i, execution := range pipelineExecutions {
+		if execution.ID == request.Version.Ref {
+			refLoc = i
+			break
+		}
 	}
 
 	//loop from the input execution onwards loop will just use the last element if input execution is not found
 	var res concourse.CheckResponse
-	for ; i < len(pipelineExecutions); i++ {
+	for i := refLoc; i < len(pipelineExecutions); i++ {
 		res = append(res, concourse.Version{Ref: pipelineExecutions[i].ID})
 	}
-	concourse.WriteCheckResponse(res)
+	concourse.WriteResponse(res)
+}
+
+func FilterName(name string, pes []spinnaker.PipelineExecution) []spinnaker.PipelineExecution {
+	pe := make([]spinnaker.PipelineExecution, 0)
+	for _, pipeExec := range pes {
+		if pipeExec.Name == name {
+			pe = append(pe, pipeExec)
+		}
+	}
+	return pe
+}
+
+func CheckStatus(status string, statuses []string) bool {
+	if statuses == nil || len(statuses) == 0 || (len(statuses) == 1 && statuses[0] == "") {
+		return true
+	}
+	for _, currStatus := range statuses {
+		if status == currStatus {
+			return true
+		}
+	}
+	return false
+}
+
+func FilterStatus(statuses []string, pes []spinnaker.PipelineExecution) []spinnaker.PipelineExecution {
+	pe := make([]spinnaker.PipelineExecution, 0)
+	for _, pipeExec := range pes {
+		if CheckStatus(pipeExec.Status, statuses) {
+			pe = append(pe, pipeExec)
+		}
+	}
+	return pe
 }

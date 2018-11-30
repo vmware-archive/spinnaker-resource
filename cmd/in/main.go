@@ -14,7 +14,7 @@ import (
 func main() {
 
 	var request concourse.InRequest
-	concourse.ReadInRequest(&request)
+	concourse.ReadRequest(&request)
 
 	spinClient, err := spinnaker.NewClient(request.Source)
 	concourse.Check("get", err)
@@ -60,6 +60,6 @@ func main() {
 		Metadata: resArr,
 	}
 
-	concourse.WriteInResponse(InResponse)
+	concourse.WriteResponse(InResponse)
 
 }

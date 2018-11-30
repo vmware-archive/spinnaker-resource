@@ -1,11 +1,12 @@
 package concourse
 
 type Source struct {
-	SpinnakerAPI         string `json:"spinnaker_api"`
-	SpinnakerApplication string `json:"spinnaker_application"`
-	SpinnakerPipeline    string `json:"spinnaker_pipeline"`
-	X509Cert             string `json:"spinnaker_x509_cert"`
-	X509Key              string `json:"spinnaker_x509_key"`
+	SpinnakerAPI         string   `json:"spinnaker_api"`
+	SpinnakerApplication string   `json:"spinnaker_application"`
+	SpinnakerPipeline    string   `json:"spinnaker_pipeline"`
+	Statuses             []string `json:"statuses"`
+	X509Cert             string   `json:"spinnaker_x509_cert"`
+	X509Key              string   `json:"spinnaker_x509_key"`
 }
 
 type Version struct {
