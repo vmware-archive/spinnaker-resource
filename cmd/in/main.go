@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,10 +23,17 @@ func main() {
 	res, err := spinClient.GetPipelineRaw(request.Version.Ref)
 	concourse.Check("get", err)
 
-	err = ioutil.WriteFile(filepath.Join(os.Getenv("1"), "metadata.json"), res, 0644)
+	if len(os.Args) < 2 {
+		err := fmt.Errorf("destination path not specified")
+		concourse.Check("get", err)
+	}
+
+	dest := os.Args[1]
+
+	err = ioutil.WriteFile(filepath.Join(dest, "metadata.json"), res, 0644)
 	concourse.Check("get", err)
 
-	err = ioutil.WriteFile(filepath.Join(os.Getenv("1"), "version"), []byte(request.Version.Ref), 0644)
+	err = ioutil.WriteFile(filepath.Join(dest, "version"), []byte(request.Version.Ref), 0644)
 	concourse.Check("get", err)
 
 	var metaData concourse.IntermediateMetadata

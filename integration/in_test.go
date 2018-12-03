@@ -30,6 +30,7 @@ var _ = Describe("In", func() {
 		pipelineID                    string
 		allHandler                    http.HandlerFunc
 		inSess                        *gexec.Session
+		dir                           string
 	)
 
 	JustBeforeEach(func() {
@@ -73,7 +74,9 @@ var _ = Describe("In", func() {
 		marshalledInput, err = json.Marshal(input)
 		Expect(err).ToNot(HaveOccurred())
 
-		cmd := exec.Command(inPath)
+		dir, err = ioutil.TempDir("", "location_for_metadata")
+		Expect(err).ToNot(HaveOccurred())
+		cmd := exec.Command(inPath, dir)
 		cmd.Stdin = bytes.NewBuffer(marshalledInput)
 		inSess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
@@ -83,7 +86,6 @@ var _ = Describe("In", func() {
 	Context("when the pipeline exists and spinnaker all response data", func() {
 		var (
 			mappedRes map[string]interface{}
-			dir       string
 		)
 
 		BeforeEach(func() {
@@ -102,9 +104,6 @@ var _ = Describe("In", func() {
 					mappedRes,
 				),
 			)
-			dir, err = ioutil.TempDir("", "location_for_metadata")
-			Expect(err).ToNot(HaveOccurred())
-			os.Setenv("1", dir)
 		})
 
 		It("stores the metadata into a JSON file, in the resource's volume", func() {
