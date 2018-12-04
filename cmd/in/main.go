@@ -55,11 +55,11 @@ func main() {
 		},
 		concourse.InResponseMetadataKV{
 			Name:  "Start time",
-			Value: time.Unix(metaData.StartTime, 0).Format(time.UnixDate),
+			Value: time.Unix(metaData.StartTime/1000, 0).Format(time.UnixDate),
 		},
 		concourse.InResponseMetadataKV{
 			Name:  "End time",
-			Value: time.Unix(metaData.EndTime, 0).Format(time.UnixDate),
+			Value: time.Unix(metaData.EndTime/1000, 0).Format(time.UnixDate),
 		},
 	}
 
