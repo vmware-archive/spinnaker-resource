@@ -1,0 +1,115 @@
+groups:
+- name: trigger-on-build
+  jobs:
+  - unit
+  - build
+  - handoff-spinnaker
+  - run-acceptence
+- name: notify-on-failure
+  jobs:
+  - slack-notification
+resources:
+- name: slack-alert
+  type: slack-notification
+  source:
+    url: https://hooks.slack.com/services/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
+- name: booklit
+  type: git
+  source:
+    uri: https://github.com/vito/booklit
+- name: spinnaker-builder
+  type: spinnaker
+  source:
+    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
+    spinnaker_application: nvidia
+    spinnaker_pipeline: bar
+    spinnaker_x509_cert: ((spinnaker_x509_cert))
+    spinnaker_x509_key: ((spinnaker_x509_key))
+  check_every: 10s
+- name: spinnaker
+  type: spinnaker
+  source:
+    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
+    spinnaker_application: nvidia
+    spinnaker_pipeline: foo
+    spinnaker_x509_cert: ((spinnaker_x509_cert))
+    spinnaker_x509_key: ((spinnaker_x509_key))
+    statuses:
+    - TERMINAL
+  check_every: 10s
+resource_types:
+- name: spinnaker
+  type: docker-image
+  source:
+    repository: concourse/spinnaker-resource-dev
+- name: slack-notification
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource
+    tag: latest
+jobs:
+- name: slack-notification
+  plan:
+  - get: spinnaker
+    trigger: true
+  - put: slack-alert
+    params:
+      channel: '#spin'
+      text: |
+        spinnaker pipeline FAILED!
+        Result: $TEXT_FILE_CONTENT
+      text_file: spinnaker/metadata.json
+- name: unit
+  plan:
+  - get: booklit
+    trigger: true
+  - task: test
+    file: booklit/ci/test.yml
+- name: build
+  plan:
+  - get: booklit
+    passed:
+    - unit
+    trigger: true
+  - task: build-image
+    file: booklit/ci/build.yml
+- name: handoff-spinnaker
+  plan:
+  - get: booklit
+    passed:
+    - build
+    trigger: true
+  - put: spinnaker-builder
+    params:
+      trigger_params:
+        atc_url: $ATC_EXTERNAL_URL
+        build_id: $BUILD_ID
+        build_job_name: $BUILD_JOB_NAME
+- name: run-acceptence
+  plan:
+  - get: spinnaker-builder
+    passed:
+    - handoff-spinnaker
+    trigger: true
+  - task: run-test
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: ubuntu
+          tag: xenial
+      run:
+        path: /bin/bash
+        args:
+        - -ec
+        - |2
+
+          apt-get update -qq && apt-get install -y jq > /tmp/out.txt 2> /tmp/err.txt
+          echo -e "Running acceptence\n"
+          echo -e "Spinnaker pipeline: "
+          cat spinnaker-builder/version
+          echo -e "\n\n spinnaker's manifest: \n"
+          cat spinnaker-builder/metadata.json | jq .
+      inputs:
+      - name: spinnaker-builder
