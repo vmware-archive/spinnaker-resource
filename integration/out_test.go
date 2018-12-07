@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os/exec"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -72,7 +73,6 @@ var _ = Describe("Out", func() {
 	})
 
 	Context("when Spinnaker responds with an accepted pipeline execution", func() {
-
 		BeforeEach(func() {
 			pipelineName = "foo"
 			applicationName = "bar"
@@ -96,10 +96,163 @@ var _ = Describe("Out", func() {
 			Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
 
 		})
+		//TODO needs drying up
+		Context("when a status and timeout are specified and Spinnaker pipeline doesn't reach the desired state within the timeout duration", func() {
+			JustBeforeEach(func() {
+				input = concourse.OutRequest{
+					Source: concourse.Source{
+						SpinnakerAPI:         spinnakerServer.URL(),
+						SpinnakerApplication: applicationName,
+						SpinnakerPipeline:    pipelineName,
+						X509Cert:             serverCert,
+						X509Key:              serverKey,
+						Statuses:             []string{"SUCCEEDED"},
+						StatusCheckTimeout:   500 * time.Millisecond,
+						StatusCheckInterval:  200 * time.Millisecond,
+					},
+				}
+				runningHandler := ghttp.CombineHandlers(
+					ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),
+					ghttp.RespondWithJSONEncoded(
+						statusCode,
+						map[string]string{
+							"id":     pipelineExecutionID,
+							"status": "RUNNING",
+						},
+					),
+				)
+				marshalledInput, err = json.Marshal(input)
+				Expect(err).ToNot(HaveOccurred())
+				spinnakerServer.AppendHandlers(
+					runningHandler,
+					runningHandler,
+					runningHandler,
+				)
+			})
+
+			It("times out and exits with a non zero status and prints an error message", func() {
+				cmd := exec.Command(outPath)
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(outSess.Exited).Should(BeClosed())
+				// Expect(spinnakerServer.ReceivedRequests()).Should(HaveLen(6))
+				Expect(outSess.ExitCode()).To(Equal(1))
+
+				Expect(outSess.Err).To(gbytes.Say("error put step failed: "))
+				Expect(outSess.Err).To(gbytes.Say("timed out waiting for configured status\\(es\\)"))
+			})
+		})
+		//TODO needs drying up
+		Context("when a status is specified, and an unexpected final status reached", func() {
+			JustBeforeEach(func() {
+				input = concourse.OutRequest{
+					Source: concourse.Source{
+						SpinnakerAPI:         spinnakerServer.URL(),
+						SpinnakerApplication: applicationName,
+						SpinnakerPipeline:    pipelineName,
+						X509Cert:             serverCert,
+						X509Key:              serverKey,
+						Statuses:             []string{"SUCCEEDED"},
+						StatusCheckInterval:  200 * time.Millisecond,
+					},
+				}
+				marshalledInput, err = json.Marshal(input)
+				Expect(err).ToNot(HaveOccurred())
+				spinnakerServer.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),
+						ghttp.RespondWithJSONEncoded(
+							statusCode,
+							map[string]string{
+								"id":     pipelineExecutionID,
+								"status": "RUNNING",
+							},
+						),
+					),
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),
+						ghttp.RespondWithJSONEncoded(
+							statusCode,
+							map[string]string{
+								"id":     pipelineExecutionID,
+								"status": "TERMINAL",
+							},
+						),
+					),
+				)
+			})
+
+			It("exits with non zero code and prints an error message", func() {
+				cmd := exec.Command(outPath)
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				<-outSess.Exited
+				Expect(spinnakerServer.ReceivedRequests()).Should(HaveLen(5))
+				Expect(outSess.ExitCode()).To(Equal(1))
+
+				Expect(outSess.Err).To(gbytes.Say("error put step failed:"))
+				Expect(outSess.Err).To(gbytes.Say("Pipeline execution reached a final state: TERMINAL"))
+			})
+		})
+
+		//TODO needs drying up
+		Context("when a status is specified, and reached", func() {
+			JustBeforeEach(func() {
+				input = concourse.OutRequest{
+					Source: concourse.Source{
+						SpinnakerAPI:         spinnakerServer.URL(),
+						SpinnakerApplication: applicationName,
+						SpinnakerPipeline:    pipelineName,
+						X509Cert:             serverCert,
+						X509Key:              serverKey,
+						Statuses:             []string{"SUCCEEDED"},
+						StatusCheckInterval:  200 * time.Millisecond,
+					},
+				}
+				marshalledInput, err = json.Marshal(input)
+				Expect(err).ToNot(HaveOccurred())
+				spinnakerServer.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),
+						ghttp.RespondWithJSONEncoded(
+							statusCode,
+							map[string]string{
+								"id":     pipelineExecutionID,
+								"status": "RUNNING",
+							},
+						),
+					),
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),
+						ghttp.RespondWithJSONEncoded(
+							statusCode,
+							map[string]string{
+								"id":     pipelineExecutionID,
+								"status": "SUCCEEDED",
+							},
+						),
+					),
+				)
+			})
+			It("waits till the pipeline execution status is satisfied and returns the pipeline execution id", func() {
+				cmd := exec.Command(outPath)
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				<-outSess.Exited
+				Expect(spinnakerServer.ReceivedRequests()).Should(HaveLen(5))
+				Expect(outSess.ExitCode()).To(Equal(0))
+
+				err = json.Unmarshal(outSess.Out.Contents(), &outResponse)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
+			})
+		})
 	})
 
 	Context("when spinnaker responds with 4xx", func() {
-
 		BeforeEach(func() {
 			pipelineName = "foo"
 			applicationName = "bar"
