@@ -27,7 +27,6 @@ var _ = Describe("Out", func() {
 		err                           error
 		outResponse                   concourse.OutResponse
 		inputSource                   concourse.Source
-		statusHandlers                []http.HandlerFunc
 	)
 	BeforeEach(func() {
 		pipelineName = "foo"
@@ -72,10 +71,9 @@ var _ = Describe("Out", func() {
 		}
 		marshalledInput, err = json.Marshal(input)
 		Expect(err).ToNot(HaveOccurred())
-		spinnakerServer.AppendHandlers(statusHandlers...)
 	})
 
-	Context("when Spinnaker responds with an accepted pipeline execution", func() {
+	Context("when Spinnaker responds with a status code 202 accepted pipeline execution", func() {
 		BeforeEach(func() {
 			httpPOSTSuccessHandler := ghttp.CombineHandlers(
 				ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
@@ -101,13 +99,14 @@ var _ = Describe("Out", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
 		})
+
 		Context("when status is configured", func() {
 			BeforeEach(func() {
 				inputSource.Statuses = []string{"SUCCEEDED"}
 				inputSource.StatusCheckInterval = 200 * time.Millisecond
 			})
 
-			Context("when a status and timeout are specified and Spinnaker pipeline doesn't reach the desired state within the timeout duration", func() {
+			Context("when a timeout is specified and Spinnaker pipeline doesn't reach the desired state within the timeout duration", func() {
 				BeforeEach(func() {
 					inputSource.StatusCheckTimeout = 500 * time.Millisecond
 
@@ -121,11 +120,11 @@ var _ = Describe("Out", func() {
 							},
 						),
 					)
-					statusHandlers = []http.HandlerFunc{
+					spinnakerServer.AppendHandlers(
 						runningHandler,
 						runningHandler,
 						runningHandler,
-					}
+					)
 				})
 
 				It("times out and exits with a non zero status and prints an error message", func() {
@@ -140,6 +139,7 @@ var _ = Describe("Out", func() {
 					Expect(outSess.Err).To(gbytes.Say("timed out waiting for configured status\\(es\\)"))
 				})
 			})
+
 			Context("when a status is specified, and an unexpected final status reached", func() {
 				BeforeEach(func() {
 					statusHandlers := []http.HandlerFunc{
@@ -181,10 +181,9 @@ var _ = Describe("Out", func() {
 				})
 			})
 
-			//TODO needs drying up
 			Context("when a status is specified, and reached", func() {
 				BeforeEach(func() {
-					statusHandlers = []http.HandlerFunc{
+					spinnakerServer.AppendHandlers(
 						ghttp.CombineHandlers(
 							ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),
 							ghttp.RespondWithJSONEncoded(
@@ -205,7 +204,7 @@ var _ = Describe("Out", func() {
 								},
 							),
 						),
-					}
+					)
 				})
 				It("waits till the pipeline execution status is satisfied and returns the pipeline execution id", func() {
 					cmd := exec.Command(outPath)
@@ -224,7 +223,7 @@ var _ = Describe("Out", func() {
 		})
 	})
 
-	Context("when Spinnaker responds with 4xx on a POST for a pipeline execution", func() {
+	Context("when Spinnaker responds with status code 4xx on a POST for a pipeline execution", func() {
 		var statusCode int
 		BeforeEach(func() {
 
