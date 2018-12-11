@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pivotal-cf/spinnaker-resource/concourse"
@@ -18,16 +20,22 @@ var (
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		concourse.Fatal(fmt.Sprintf("usage: %s <sources director>\n", os.Args[0]), errors.New("Not enough arguments supplied"))
+	}
+
 	var request concourse.OutRequest
 	var err error
 	concourse.ReadRequest(&request)
+
+	sourcesDir := os.Args[1]
 
 	spinClient, err = spinnaker.NewClient(request.Source)
 	if err != nil {
 		concourse.Fatal("put step failed", err)
 	}
 
-	pipelineExecutionID, err := invokePipeline(request)
+	pipelineExecutionID, err := invokePipeline(sourcesDir, request)
 	if err != nil {
 		concourse.Fatal("put step failed", err)
 	}
@@ -41,7 +49,7 @@ func main() {
 	writeSuccessfulResponse(pipelineExecutionID)
 }
 
-func invokePipeline(request concourse.OutRequest) (string, error) {
+func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, error) {
 	TriggerParamsMap := map[string]interface{}{"type": "concourse-resource"}
 
 	if len(request.Params.TriggerParams) > 0 {
@@ -52,7 +60,8 @@ func invokePipeline(request concourse.OutRequest) (string, error) {
 		TriggerParamsMap["parameters"] = triggerParams
 	}
 	if len(request.Params.Artifacts) > 0 {
-		artifacts, err := ioutil.ReadFile(request.Params.Artifacts)
+		localPath := filepath.Join(sourcesDir, request.Params.Artifacts)
+		artifacts, err := ioutil.ReadFile(localPath)
 		if err != nil {
 			return "", err
 		}

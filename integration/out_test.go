@@ -95,7 +95,7 @@ var _ = Describe("Out", func() {
 				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
 			})
 			It("returns the pipeline execution id", func() {
-				cmd := exec.Command(outPath)
+				cmd := exec.Command(outPath, "")
 				cmd.Stdin = bytes.NewBuffer(marshalledInput)
 				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
@@ -137,7 +137,7 @@ var _ = Describe("Out", func() {
 
 			It("calls Spinnaker API with the artifacts in the post body", func() {
 
-				cmd := exec.Command(outPath)
+				cmd := exec.Command(outPath, "")
 				cmd.Stdin = bytes.NewBuffer(marshalledInput)
 				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
@@ -175,7 +175,7 @@ var _ = Describe("Out", func() {
 			})
 
 			It("calls Spinnaker API with the trigger params in the post body", func() {
-				cmd := exec.Command(outPath)
+				cmd := exec.Command(outPath, "")
 				cmd.Env = []string{"BAZ=bazbar"}
 				cmd.Stdin = bytes.NewBuffer(marshalledInput)
 				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -219,7 +219,7 @@ var _ = Describe("Out", func() {
 				})
 
 				It("times out and exits with a non zero status and prints an error message", func() {
-					cmd := exec.Command(outPath)
+					cmd := exec.Command(outPath, "")
 					cmd.Stdin = bytes.NewBuffer(marshalledInput)
 					outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
@@ -259,7 +259,7 @@ var _ = Describe("Out", func() {
 				})
 
 				It("exits with non zero code and prints an error message", func() {
-					cmd := exec.Command(outPath)
+					cmd := exec.Command(outPath, "")
 					cmd.Stdin = bytes.NewBuffer(marshalledInput)
 					outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
@@ -298,7 +298,7 @@ var _ = Describe("Out", func() {
 					)
 				})
 				It("waits till the pipeline execution status is satisfied and returns the pipeline execution id", func() {
-					cmd := exec.Command(outPath)
+					cmd := exec.Command(outPath, "")
 					cmd.Stdin = bytes.NewBuffer(marshalledInput)
 					outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
@@ -334,7 +334,7 @@ var _ = Describe("Out", func() {
 		})
 
 		It("prints the status code, response body and exits with exit code 1", func() {
-			cmd := exec.Command(outPath)
+			cmd := exec.Command(outPath, "")
 			cmd.Stdin = bytes.NewBuffer(marshalledInput)
 			outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
