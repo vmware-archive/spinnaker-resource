@@ -3,6 +3,7 @@ package integration_test
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"os/exec"
 	"strconv"
@@ -27,6 +28,7 @@ var _ = Describe("Out", func() {
 		err                           error
 		outResponse                   concourse.OutResponse
 		inputSource                   concourse.Source
+		inputParams                   concourse.OutParams
 	)
 	BeforeEach(func() {
 		pipelineName = "foo"
@@ -63,19 +65,20 @@ var _ = Describe("Out", func() {
 					},
 				)),
 		)
-
 	})
 	JustBeforeEach(func() {
 		input = concourse.OutRequest{
 			Source: inputSource,
+			Params: inputParams,
 		}
 		marshalledInput, err = json.Marshal(input)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	Context("when Spinnaker responds with a status code 202 accepted pipeline execution", func() {
+		var httpPOSTSuccessHandler http.HandlerFunc
 		BeforeEach(func() {
-			httpPOSTSuccessHandler := ghttp.CombineHandlers(
+			httpPOSTSuccessHandler = ghttp.CombineHandlers(
 				ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
 				ghttp.RespondWithJSONEncoded(
 					202,
@@ -84,26 +87,114 @@ var _ = Describe("Out", func() {
 					},
 				),
 			)
-			spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
+			// spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
 		})
 
-		It("returns the pipeline execution id", func() {
-			cmd := exec.Command(outPath)
-			cmd.Stdin = bytes.NewBuffer(marshalledInput)
-			outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			<-outSess.Exited
-			Expect(outSess.ExitCode()).To(Equal(0))
+		Context("when no concourse params are defined", func() {
+			BeforeEach(func() {
+				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
+			})
+			It("returns the pipeline execution id", func() {
+				cmd := exec.Command(outPath)
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				<-outSess.Exited
+				Expect(outSess.ExitCode()).To(Equal(0))
 
-			err = json.Unmarshal(outSess.Out.Contents(), &outResponse)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
+				err = json.Unmarshal(outSess.Out.Contents(), &outResponse)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
+			})
 		})
 
-		Context("when status is configured", func() {
+		Context("when artifacts are defined", func() {
+			BeforeEach(func() {
+				postBody := `{"type":"concourse-resource","artifacts":[{"foo":"bar"}]}`
+				httpPOSTSuccessHandler = ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
+					ghttp.VerifyJSON(postBody),
+					ghttp.RespondWithJSONEncoded(
+						202,
+						map[string]string{
+							"ref": "/pipelines/" + pipelineExecutionID,
+						},
+					),
+				)
+				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
+
+				dir, err := ioutil.TempDir("", "location_for_artifact")
+				Expect(err).ToNot(HaveOccurred())
+
+				stringArtifact := `[{"foo":"bar"}]`
+				err = ioutil.WriteFile(dir+"/my-artifact.json", []byte(stringArtifact), 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				inputParams = concourse.OutParams{
+					Artifacts: dir + "/my-artifact.json",
+				}
+			})
+
+			It("calls Spinnaker API with the artifacts in the post body", func() {
+
+				cmd := exec.Command(outPath)
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				<-outSess.Exited
+				Expect(outSess.ExitCode()).To(Equal(0))
+
+				err = json.Unmarshal(outSess.Out.Contents(), &outResponse)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
+
+			})
+		})
+
+		Context("when trigger params are defined", func() {
+			BeforeEach(func() {
+				postBody := `{"type":"concourse-resource","parameters":{"foo":"bar", "foobar": "bazbar"}}`
+				httpPOSTSuccessHandler = ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
+					ghttp.VerifyJSON(postBody),
+					ghttp.RespondWithJSONEncoded(
+						202,
+						map[string]string{
+							"ref": "/pipelines/" + pipelineExecutionID,
+						},
+					),
+				)
+				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
+
+				inputParams = concourse.OutParams{
+					TriggerParams: map[string]string{
+						"foo":    "bar",
+						"foobar": "$BAZ",
+					},
+				}
+			})
+
+			It("calls Spinnaker API with the trigger params in the post body", func() {
+				cmd := exec.Command(outPath)
+				cmd.Env = []string{"BAZ=bazbar"}
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				<-outSess.Exited
+				Expect(outSess.ExitCode()).To(Equal(0))
+
+				err = json.Unmarshal(outSess.Out.Contents(), &outResponse)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
+
+			})
+		})
+
+		Context("when status is defined", func() {
 			BeforeEach(func() {
 				inputSource.Statuses = []string{"SUCCEEDED"}
 				inputSource.StatusCheckInterval = 200 * time.Millisecond
+				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
 			})
 
 			Context("when a timeout is specified and Spinnaker pipeline doesn't reach the desired state within the timeout duration", func() {

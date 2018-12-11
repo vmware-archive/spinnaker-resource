@@ -24,6 +24,7 @@ type MetadataPair struct {
 
 type OutParams struct {
 	TriggerParams map[string]string `json:"trigger_params,omitempty"` // optional
+	Artifacts     string            `json:"artifacts"`                // optional
 }
 
 type CheckRequest struct {

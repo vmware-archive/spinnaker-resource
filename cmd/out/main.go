@@ -1,9 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/pivotal-cf/spinnaker-resource/concourse"
@@ -12,7 +13,6 @@ import (
 
 var (
 	TriggerParams []byte
-	Params        string
 	Data          map[string]interface{}
 	spinClient    spinnaker.SpinClient
 )
@@ -42,22 +42,36 @@ func main() {
 }
 
 func invokePipeline(request concourse.OutRequest) (string, error) {
-	//Can be refactored
-	if len(request.Params.TriggerParams) == 0 {
-		TriggerParams = []byte(`{"type": "concourse-resource"}`)
-	} else {
+	TriggerParamsMap := map[string]interface{}{"type": "concourse-resource"}
+
+	if len(request.Params.TriggerParams) > 0 {
+		triggerParams := map[string]string{}
 		for key, value := range request.Params.TriggerParams {
-			Params = Params + fmt.Sprintf("\"%s\":\"%s\",", key, value)
+			triggerParams[key] = os.ExpandEnv(value)
 		}
-		Params = strings.TrimSuffix(Params, ",")
-		// expand any variables
-		paramsText := os.ExpandEnv(Params)
-		TriggerParams = []byte(`{"type": "concourse-resource", "parameters": {` + paramsText + `}}`)
+		TriggerParamsMap["parameters"] = triggerParams
+	}
+	if len(request.Params.Artifacts) > 0 {
+		artifacts, err := ioutil.ReadFile(request.Params.Artifacts)
+		if err != nil {
+			return "", err
+		}
+		var JsonArtifacts interface{}
+		err = json.Unmarshal(artifacts, &JsonArtifacts)
+		if err != nil {
+			return "", err
+		}
+		TriggerParamsMap["artifacts"] = JsonArtifacts
+	}
+
+	postBody, err := json.Marshal(TriggerParamsMap)
+	if err != nil {
+		return "", err
 	}
 
 	concourse.Sayf("Executing pipeline: '%s/%s'\n", request.Source.SpinnakerApplication, request.Source.SpinnakerPipeline)
 
-	pipelineExecution, err := spinClient.InvokePipelineExecution(TriggerParams)
+	pipelineExecution, err := spinClient.InvokePipelineExecution(postBody)
 	if err != nil {
 		return "", err
 	}
