@@ -148,11 +148,11 @@ var _ = Describe("In", func() {
 				},
 				concourse.InResponseMetadataKV{
 					Name:  "Start time",
-					Value: time.Unix(1543414041364, 0).Format(time.UnixDate),
+					Value: time.Unix(1543414041364/1000, 0).Format(time.UnixDate),
 				},
 				concourse.InResponseMetadataKV{
 					Name:  "End time",
-					Value: time.Unix(1543414041439, 0).Format(time.UnixDate),
+					Value: time.Unix(1543414041439/1000, 0).Format(time.UnixDate),
 				},
 			}
 
