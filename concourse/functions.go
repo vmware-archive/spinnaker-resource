@@ -8,13 +8,6 @@ import (
 	"github.com/mitchellh/colorstring"
 )
 
-func Check(step string, err error) {
-	//TODO: refactor this function to return something instead of exiting
-	if err != nil {
-		Fatal(step+" step failed", err)
-	}
-}
-
 func Fatal(doing string, err error) {
 	Sayf(colorstring.Color("[red]error %s: %s\n"), doing, err)
 	//TODO: don't exit here, let the caller decide.

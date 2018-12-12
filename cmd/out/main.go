@@ -13,11 +13,11 @@ import (
 	"github.com/pivotal-cf/spinnaker-resource/spinnaker"
 )
 
-var (
-	TriggerParams []byte
-	Data          map[string]interface{}
-	spinClient    spinnaker.SpinClient
-)
+var spinClient spinnaker.SpinClient
+
+const defaultPollingInterval = 30 * time.Second
+
+var triggerParamsBase = map[string]interface{}{"type": "concourse-resource"}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -50,7 +50,7 @@ func main() {
 }
 
 func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, error) {
-	TriggerParamsMap := map[string]interface{}{"type": "concourse-resource"}
+	TriggerParamsMap := triggerParamsBase
 
 	triggerParams := map[string]string{}
 	if len(request.Params.TriggerParams) > 0 {
@@ -104,7 +104,7 @@ func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID st
 	interval := request.Source.StatusCheckInterval
 	timeout := request.Source.StatusCheckTimeout
 	if interval == 0*time.Second {
-		interval = 30 * time.Second
+		interval = defaultPollingInterval
 	}
 
 	if timeout < interval {
@@ -117,7 +117,9 @@ func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID st
 		select {
 		case <-pollTicker.C:
 			rawPipeline, err := spinClient.GetPipeline(pipelineExecutionID)
-			concourse.Check("put", err)
+			if err != nil {
+				concourse.Fatal("put step failed", err)
+			}
 			statusReached = checkStatus(rawPipeline["status"].(string), request.Source.Statuses)
 
 			//Intermediate statuses

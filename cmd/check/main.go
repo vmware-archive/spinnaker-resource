@@ -12,10 +12,14 @@ func main() {
 	concourse.ReadRequest(&request)
 
 	spinClient, err := spinnaker.NewClient(request.Source)
-	concourse.Check("check", err)
+	if err != nil {
+		concourse.Fatal("check step failed", err)
+	}
 
 	Data, err := spinClient.GetPipelineExecutions()
-	concourse.Check("check", err)
+	if err != nil {
+		concourse.Fatal("check step failed", err)
+	}
 
 	pipelineExecutions := FilterName(request.Source.SpinnakerPipeline, Data)
 

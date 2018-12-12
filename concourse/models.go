@@ -49,7 +49,7 @@ type OutResponse struct {
 
 type CheckResponse []Version
 
-type InResponseMetadataKV struct {
+type InResponseMetadata struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
@@ -64,5 +64,5 @@ type IntermediateMetadata struct {
 
 type InResponse struct {
 	Version  `json:"version"`
-	Metadata []InResponseMetadataKV `json:"metadata"`
+	Metadata []InResponseMetadata `json:"metadata"`
 }

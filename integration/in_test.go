@@ -133,24 +133,24 @@ var _ = Describe("In", func() {
 			Expect(inSess.ExitCode()).To(Equal(0))
 
 			//Values here match the fixture file
-			expArr := []concourse.InResponseMetadataKV{
-				concourse.InResponseMetadataKV{
+			expArr := []concourse.InResponseMetadata{
+				concourse.InResponseMetadata{
 					Name:  "Application Name",
 					Value: "nvidia",
 				},
-				concourse.InResponseMetadataKV{
+				concourse.InResponseMetadata{
 					Name:  "Pipeline Name",
 					Value: "bar",
 				},
-				concourse.InResponseMetadataKV{
+				concourse.InResponseMetadata{
 					Name:  "Status",
 					Value: "SUCCEEDED",
 				},
-				concourse.InResponseMetadataKV{
+				concourse.InResponseMetadata{
 					Name:  "Start time",
 					Value: time.Unix(1543414041364/1000, 0).Format(time.UnixDate),
 				},
-				concourse.InResponseMetadataKV{
+				concourse.InResponseMetadata{
 					Name:  "End time",
 					Value: time.Unix(1543414041439/1000, 0).Format(time.UnixDate),
 				},
