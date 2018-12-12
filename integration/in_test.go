@@ -95,7 +95,8 @@ var _ = Describe("In", func() {
 			expectedResBytes, err := ioutil.ReadFile("./fixtures/get_pipelines_response.json")
 			Expect(err).ToNot(HaveOccurred())
 
-			json.Unmarshal(expectedResBytes, &mappedRes)
+			err = json.Unmarshal(expectedResBytes, &mappedRes)
+			Expect(err).ToNot(HaveOccurred())
 
 			allHandler = ghttp.CombineHandlers(
 				ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineID)),
@@ -115,9 +116,10 @@ var _ = Describe("In", func() {
 			Expect(filepath.Join(dir, "version")).To(BeAnExistingFile())
 
 			actualResBytes, err := ioutil.ReadFile(filepath.Join(dir, "metadata.json"))
+			Expect(err).ToNot(HaveOccurred())
 
 			var actualResMap map[string]interface{}
-			err = json.Unmarshal([]byte(actualResBytes), &actualResMap)
+			err = json.Unmarshal(actualResBytes, &actualResMap)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(actualResMap).To(Equal(mappedRes))

@@ -100,7 +100,7 @@ func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, er
 }
 
 func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID string) error {
-	statusReached := false
+	var statusReached bool
 	interval := request.Source.StatusCheckInterval
 	timeout := request.Source.StatusCheckTimeout
 	if interval == 0*time.Second {

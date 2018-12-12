@@ -28,7 +28,8 @@ func NewClient(source concourse.Source) (SpinClient, error) {
 		MinVersion:               tls.VersionTLS12,
 		PreferServerCipherSuites: true,
 		Certificates:             []tls.Certificate{cert},
-		InsecureSkipVerify:       true,
+		//TODO Do something!!
+		InsecureSkipVerify: true,
 	}
 
 	tr := &http.Transport{
@@ -124,7 +125,7 @@ func (c *SpinClient) GetPipelineRaw(pipelineID string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []byte(body), nil
+	return body, nil
 }
 
 //returns the last 25 spinnaker pipeline executions
@@ -147,7 +148,7 @@ func (c *SpinClient) GetPipelineExecutions() ([]PipelineExecution, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = json.Unmarshal([]byte(body), &pipelineExecutions)
+		err = json.Unmarshal(body, &pipelineExecutions)
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +176,7 @@ func (c *SpinClient) InvokePipelineExecution(body []byte) (PipelineExecution, er
 			return pipelineExecution, err
 		}
 		var Data map[string]interface{}
-		err = json.Unmarshal([]byte(body), &Data)
+		err = json.Unmarshal(body, &Data)
 		if err != nil {
 			return pipelineExecution, err
 		}

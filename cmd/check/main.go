@@ -25,7 +25,7 @@ func main() {
 
 	pipelineExecutions = FilterStatus(request.Source.Statuses, pipelineExecutions)
 
-	if len(pipelineExecutions) <= 0 {
+	if len(pipelineExecutions) == 0 {
 		concourse.WriteResponse(concourse.CheckResponse{})
 	}
 
@@ -61,7 +61,7 @@ func FilterName(name string, pes []spinnaker.PipelineExecution) []spinnaker.Pipe
 }
 
 func CheckStatus(status string, statuses []string) bool {
-	if statuses == nil || len(statuses) == 0 || (len(statuses) == 1 && statuses[0] == "") {
+	if len(statuses) == 0 {
 		return true
 	}
 	for _, currStatus := range statuses {
