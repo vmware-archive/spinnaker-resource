@@ -7,8 +7,8 @@ type Source struct {
 	SpinnakerApplication string        `json:"spinnaker_application"`
 	SpinnakerPipeline    string        `json:"spinnaker_pipeline"`
 	Statuses             []string      `json:"statuses"`
-	StatusCheckTimeout   time.Duration `json:"status-check-timeout"`
-	StatusCheckInterval  time.Duration `json:"status-check-interval"`
+	StatusCheckTimeout   time.Duration `json:"status_check_timeout"`
+	StatusCheckInterval  time.Duration `json:"status_check_interval"`
 	X509Cert             string        `json:"spinnaker_x509_cert"`
 	X509Key              string        `json:"spinnaker_x509_key"`
 }
