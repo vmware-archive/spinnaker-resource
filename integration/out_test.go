@@ -260,7 +260,7 @@ var _ = Describe("Out", func() {
 					)
 				})
 
-				It("times out and exits with a non zero status and prints an error message", func() {
+				It("print a '.' for every check and times out and exits with a non zero status and prints an error message", func() {
 					cmd := exec.Command(outPath, "")
 					cmd.Stdin = bytes.NewBuffer(marshalledInput)
 					outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -268,6 +268,7 @@ var _ = Describe("Out", func() {
 					Eventually(outSess.Exited).Should(BeClosed())
 					Expect(outSess.ExitCode()).To(Equal(1))
 
+					Expect(outSess.Err).To(gbytes.Say("\\.\\.\n"))
 					Expect(outSess.Err).To(gbytes.Say("error put step failed: "))
 					Expect(outSess.Err).To(gbytes.Say("timed out waiting for configured status\\(es\\)"))
 				})

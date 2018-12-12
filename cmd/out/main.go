@@ -122,14 +122,18 @@ func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID st
 
 			//Intermediate statuses
 			if statusReached {
+				concourse.Sayf("\n")
 				return nil
 			}
 			status := rawPipeline["status"].(string)
 			if status != "RUNNING" && status != "NOT_STARTED" && status != "BUFFERED" {
+				concourse.Sayf("\n")
 				return fmt.Errorf("Pipeline execution reached a final state: %s", status)
 			}
+			concourse.Sayf(".")
 
 		case <-timeoutTicker.C:
+			concourse.Sayf("\n")
 			return fmt.Errorf("timed out waiting for configured status(es)")
 		}
 	}
