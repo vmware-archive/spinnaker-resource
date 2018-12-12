@@ -170,7 +170,7 @@ var _ = Describe("Spinnaker Client", func() {
 				})
 			})
 
-			Context("Given an pipeline does exist", func() {
+			Context("Given an pipeline that exists", func() {
 				BeforeEach(func() {
 					pipelineConfigHandler = ghttp.CombineHandlers(
 						ghttp.VerifyRequest("GET", MatchRegexp(".*/applications/"+applicationName+"/pipelineConfigs")),

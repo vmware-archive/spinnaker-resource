@@ -21,7 +21,6 @@ func main() {
 
 	pipelineExecutions = FilterStatus(request.Source.Statuses, pipelineExecutions)
 
-	concourse.Sayf("pe: %d", len(pipelineExecutions))
 	if len(pipelineExecutions) <= 0 {
 		concourse.WriteResponse(concourse.CheckResponse{})
 	}

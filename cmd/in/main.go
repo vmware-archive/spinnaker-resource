@@ -14,6 +14,11 @@ import (
 
 func main() {
 
+	if len(os.Args) < 2 {
+		err := fmt.Errorf("destination path not specified")
+		concourse.Check("get", err)
+	}
+
 	var request concourse.InRequest
 	concourse.ReadRequest(&request)
 
@@ -22,11 +27,6 @@ func main() {
 
 	res, err := spinClient.GetPipelineRaw(request.Version.Ref)
 	concourse.Check("get", err)
-
-	if len(os.Args) < 2 {
-		err := fmt.Errorf("destination path not specified")
-		concourse.Check("get", err)
-	}
 
 	dest := os.Args[1]
 

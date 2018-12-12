@@ -83,7 +83,7 @@ var _ = Describe("In", func() {
 		<-inSess.Exited
 	})
 
-	Context("when the pipeline exists and spinnaker all response data", func() {
+	Context("when the pipeline exists and spinnaker returns all response data", func() {
 		var (
 			mappedRes map[string]interface{}
 		)
@@ -106,7 +106,7 @@ var _ = Describe("In", func() {
 			)
 		})
 
-		It("stores the metadata into a JSON file, in the resource's volume", func() {
+		It("stores the metadata into a JSON file and a version file, in the resource's volume", func() {
 			defer os.RemoveAll(dir)
 
 			Expect(inSess.ExitCode()).To(Equal(0))
@@ -127,7 +127,7 @@ var _ = Describe("In", func() {
 			Expect(string(actualVersionBytes)).To(Equal(pipelineID))
 		})
 
-		It("returns the version and metadata", func() {
+		It("returns the version and concourse metadata to stdout", func() {
 			defer os.RemoveAll(dir)
 
 			Expect(inSess.ExitCode()).To(Equal(0))
@@ -169,7 +169,7 @@ var _ = Describe("In", func() {
 		})
 	})
 
-	Context("when the status code > 400", func() {
+	Context("when spinnaker responds with status code > 400", func() {
 		Context("when the status code is not 404", func() {
 			BeforeEach(func() {
 				statusCode = 500
@@ -217,7 +217,7 @@ var _ = Describe("In", func() {
 					),
 				)
 			})
-			It("prints the status code, response body and exits with exit code 1", func() {
+			It("errors with pipeline execution id is not found and exits with exit code 1", func() {
 				Expect(inSess.ExitCode()).To(Equal(1))
 
 				Expect(inSess.Err).Should(gbytes.Say("error get step failed: "))
