@@ -52,11 +52,24 @@ func main() {
 func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, error) {
 	TriggerParamsMap := map[string]interface{}{"type": "concourse-resource"}
 
+	triggerParams := map[string]string{}
 	if len(request.Params.TriggerParams) > 0 {
-		triggerParams := map[string]string{}
 		for key, value := range request.Params.TriggerParams {
 			triggerParams[key] = os.ExpandEnv(value)
 		}
+	}
+	if len(request.Params.TriggerParamsJSONFilePath) > 0 {
+		localPath := filepath.Join(sourcesDir, request.Params.TriggerParamsJSONFilePath)
+		dynamicTriggerParams, err := ioutil.ReadFile(localPath)
+		if err != nil {
+			return "", err
+		}
+		err = json.Unmarshal(dynamicTriggerParams, &triggerParams)
+		if err != nil {
+			return "", err
+		}
+	}
+	if len(triggerParams) > 0 {
 		TriggerParamsMap["parameters"] = triggerParams
 	}
 	if len(request.Params.Artifacts) > 0 {
@@ -72,7 +85,6 @@ func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, er
 		}
 		TriggerParamsMap["artifacts"] = JsonArtifacts
 	}
-
 	postBody, err := json.Marshal(TriggerParamsMap)
 	if err != nil {
 		return "", err
@@ -98,7 +110,7 @@ func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID st
 	if timeout < interval {
 		timeout = interval + 1*time.Second
 	}
-	concourse.Sayf("Interval: %v, Timeout: %v\n", interval, timeout)
+	concourse.Sayf("Poll Interval: %v, Timeout: %v\n", interval, timeout)
 	pollTicker := time.NewTicker(interval)
 	timeoutTicker := time.NewTicker(timeout)
 	for {

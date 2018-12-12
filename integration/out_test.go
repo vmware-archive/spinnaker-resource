@@ -151,6 +151,48 @@ var _ = Describe("Out", func() {
 			})
 		})
 
+		Context("when json file trigger params are defined", func() {
+			BeforeEach(func() {
+				postBody := `{"type":"concourse-resource","parameters":{"foo":"bar", "foobar": "bazbar"}}`
+				httpPOSTSuccessHandler = ghttp.CombineHandlers(
+					ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
+					ghttp.VerifyJSON(postBody),
+					ghttp.RespondWithJSONEncoded(
+						202,
+						map[string]string{
+							"ref": "/pipelines/" + pipelineExecutionID,
+						},
+					),
+				)
+				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
+
+				dir, err := ioutil.TempDir("", "location_for_params")
+				Expect(err).ToNot(HaveOccurred())
+
+				stringArtifact := `{"foo":"bar", "foobar": "bazbar"}`
+				err = ioutil.WriteFile(dir+"/my-trigger-params.json", []byte(stringArtifact), 0644)
+				Expect(err).ToNot(HaveOccurred())
+
+				inputParams = concourse.OutParams{
+					TriggerParamsJSONFilePath: dir + "/my-trigger-params.json",
+				}
+			})
+
+			It("calls Spinnaker API with the contents of the json file as trigger params in the post body", func() {
+				cmd := exec.Command(outPath, "")
+				cmd.Stdin = bytes.NewBuffer(marshalledInput)
+				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				<-outSess.Exited
+				Expect(outSess.ExitCode()).To(Equal(0))
+
+				err = json.Unmarshal(outSess.Out.Contents(), &outResponse)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(outResponse.Version.Ref).To(Equal(pipelineExecutionID))
+
+			})
+		})
+
 		Context("when trigger params are defined", func() {
 			BeforeEach(func() {
 				postBody := `{"type":"concourse-resource","parameters":{"foo":"bar", "foobar": "bazbar"}}`
