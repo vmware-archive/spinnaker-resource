@@ -26,7 +26,7 @@ func main() {
 		concourse.Fatal("get step failed", err)
 	}
 
-	res, err := spinClient.GetPipelineRaw(request.Version.Ref)
+	res, err := spinClient.GetPipelineExecutionRaw(request.Version.Ref)
 	if err != nil {
 		concourse.Fatal("get step failed", err)
 	}

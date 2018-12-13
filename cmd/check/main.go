@@ -21,9 +21,9 @@ func main() {
 		concourse.Fatal("check step failed", err)
 	}
 
-	pipelineExecutions := FilterName(request.Source.SpinnakerPipeline, Data)
+	pipelineExecutions := filterName(request.Source.SpinnakerPipeline, Data)
 
-	pipelineExecutions = FilterStatus(request.Source.Statuses, pipelineExecutions)
+	pipelineExecutions = filterStatus(request.Source.Statuses, pipelineExecutions)
 
 	if len(pipelineExecutions) == 0 {
 		concourse.WriteResponse(concourse.CheckResponse{})
@@ -44,13 +44,14 @@ func main() {
 
 	//loop from the input execution onwards loop will just use the last element if input execution is not found
 	var res concourse.CheckResponse
-	for i := refLoc; i < len(pipelineExecutions); i++ {
-		res = append(res, concourse.Version{Ref: pipelineExecutions[i].ID})
+	responseExecutions := pipelineExecutions[refLoc:]
+	for _, execution := range responseExecutions {
+		res = append(res, concourse.Version{Ref: execution.ID})
 	}
 	concourse.WriteResponse(res)
 }
 
-func FilterName(name string, pes []spinnaker.PipelineExecution) []spinnaker.PipelineExecution {
+func filterName(name string, pes []spinnaker.PipelineExecution) []spinnaker.PipelineExecution {
 	pe := make([]spinnaker.PipelineExecution, 0)
 	for _, pipeExec := range pes {
 		if pipeExec.Name == name {
@@ -60,7 +61,7 @@ func FilterName(name string, pes []spinnaker.PipelineExecution) []spinnaker.Pipe
 	return pe
 }
 
-func CheckStatus(status string, statuses []string) bool {
+func checkStatus(status string, statuses []string) bool {
 	if len(statuses) == 0 {
 		return true
 	}
@@ -72,10 +73,10 @@ func CheckStatus(status string, statuses []string) bool {
 	return false
 }
 
-func FilterStatus(statuses []string, pes []spinnaker.PipelineExecution) []spinnaker.PipelineExecution {
+func filterStatus(statuses []string, pes []spinnaker.PipelineExecution) []spinnaker.PipelineExecution {
 	pe := make([]spinnaker.PipelineExecution, 0)
 	for _, pipeExec := range pes {
-		if CheckStatus(pipeExec.Status, statuses) {
+		if checkStatus(pipeExec.Status, statuses) {
 			pe = append(pe, pipeExec)
 		}
 	}

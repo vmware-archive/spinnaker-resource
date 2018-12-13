@@ -93,9 +93,9 @@ func NewClient(source concourse.Source) (SpinClient, error) {
 	return spinClient, nil
 }
 
-func (c *SpinClient) GetPipeline(pipelineID string) (map[string]interface{}, error) {
+func (c *SpinClient) GetPipelineExecution(pipelineExecutionID string) (map[string]interface{}, error) {
 	var pipelineExecutionMetadata map[string]interface{}
-	bytes, err := c.GetPipelineRaw(pipelineID)
+	bytes, err := c.GetPipelineExecutionRaw(pipelineExecutionID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,13 +106,13 @@ func (c *SpinClient) GetPipeline(pipelineID string) (map[string]interface{}, err
 	return pipelineExecutionMetadata, nil
 }
 
-func (c *SpinClient) GetPipelineRaw(pipelineID string) ([]byte, error) {
-	url := fmt.Sprintf("%s/pipelines/%s", c.sourceConfig.SpinnakerAPI, pipelineID)
+func (c *SpinClient) GetPipelineExecutionRaw(pipelineExecutionID string) ([]byte, error) {
+	url := fmt.Sprintf("%s/pipelines/%s", c.sourceConfig.SpinnakerAPI, pipelineExecutionID)
 	response, err := c.client.Get(url)
 	if err != nil {
 		return nil, err
 	} else if response.StatusCode == 404 {
-		err = fmt.Errorf("pipeline execution ID not found (ID: %s)", pipelineID)
+		err = fmt.Errorf("pipeline execution ID not found (ID: %s)", pipelineExecutionID)
 		return nil, err
 	} else if response.StatusCode >= 400 {
 		body, err := ioutil.ReadAll(response.Body)

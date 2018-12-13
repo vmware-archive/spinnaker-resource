@@ -78,12 +78,12 @@ func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, er
 		if err != nil {
 			return "", err
 		}
-		var JsonArtifacts interface{}
-		err = json.Unmarshal(artifacts, &JsonArtifacts)
+		var JSONArtifacts interface{}
+		err = json.Unmarshal(artifacts, &JSONArtifacts)
 		if err != nil {
 			return "", err
 		}
-		TriggerParamsMap["artifacts"] = JsonArtifacts
+		TriggerParamsMap["artifacts"] = JSONArtifacts
 	}
 	postBody, err := json.Marshal(TriggerParamsMap)
 	if err != nil {
@@ -116,7 +116,7 @@ func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID st
 	for {
 		select {
 		case <-pollTicker.C:
-			rawPipeline, err := spinClient.GetPipeline(pipelineExecutionID)
+			rawPipeline, err := spinClient.GetPipelineExecution(pipelineExecutionID)
 			if err != nil {
 				concourse.Fatal("put step failed", err)
 			}
