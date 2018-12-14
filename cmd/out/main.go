@@ -15,7 +15,8 @@ import (
 
 var spinClient spinnaker.SpinClient
 
-const defaultPollingInterval = 30 * time.Second
+const defaultPollingInterval = "30s"
+const defaultPollingTimeout = "31s"
 
 var triggerParamsBase = map[string]interface{}{"type": "concourse-resource"}
 
@@ -99,17 +100,24 @@ func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, er
 	return pipelineExecution.ID, nil
 }
 
+func parseDurationDefault(stringDuration, defaultDuration string) (time.Duration, error) {
+	if stringDuration == "" {
+		return time.ParseDuration(defaultDuration)
+	}
+	return time.ParseDuration(stringDuration)
+}
 func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID string) error {
 	var statusReached bool
-	interval := request.Source.StatusCheckInterval
-	timeout := request.Source.StatusCheckTimeout
-	if interval == 0*time.Second {
-		interval = defaultPollingInterval
+
+	interval, err := parseDurationDefault(request.Source.StatusCheckInterval, defaultPollingInterval)
+	if err != nil {
+		concourse.Fatal("put step failed", err)
+	}
+	timeout, err := parseDurationDefault(request.Source.StatusCheckTimeout, defaultPollingTimeout)
+	if err != nil {
+		concourse.Fatal("put step failed", err)
 	}
 
-	if timeout < interval {
-		timeout = interval + 1*time.Second
-	}
 	concourse.Sayf("Poll Interval: %v, Timeout: %v\n", interval, timeout)
 	pollTicker := time.NewTicker(interval)
 	timeoutTicker := time.NewTicker(timeout)

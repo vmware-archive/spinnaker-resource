@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os/exec"
 	"strconv"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -235,13 +234,13 @@ var _ = Describe("Out", func() {
 		Context("when status is defined", func() {
 			BeforeEach(func() {
 				inputSource.Statuses = []string{"SUCCEEDED"}
-				inputSource.StatusCheckInterval = 200 * time.Millisecond
+				inputSource.StatusCheckInterval = "200ms"
 				spinnakerServer.AppendHandlers(httpPOSTSuccessHandler)
 			})
 
 			Context("when a timeout is specified and Spinnaker pipeline doesn't reach the desired state within the timeout duration", func() {
 				BeforeEach(func() {
-					inputSource.StatusCheckTimeout = 500 * time.Millisecond
+					inputSource.StatusCheckTimeout = "500ms"
 
 					runningHandler := ghttp.CombineHandlers(
 						ghttp.VerifyRequest("GET", MatchRegexp(".*/pipelines/"+pipelineExecutionID+".*")),

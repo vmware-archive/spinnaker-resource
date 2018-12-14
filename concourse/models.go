@@ -1,16 +1,14 @@
 package concourse
 
-import "time"
-
 type Source struct {
-	SpinnakerAPI         string        `json:"spinnaker_api"`
-	SpinnakerApplication string        `json:"spinnaker_application"`
-	SpinnakerPipeline    string        `json:"spinnaker_pipeline"`
-	Statuses             []string      `json:"statuses"`
-	StatusCheckTimeout   time.Duration `json:"status_check_timeout"`
-	StatusCheckInterval  time.Duration `json:"status_check_interval"`
-	X509Cert             string        `json:"spinnaker_x509_cert"`
-	X509Key              string        `json:"spinnaker_x509_key"`
+	SpinnakerAPI         string   `json:"spinnaker_api"`
+	SpinnakerApplication string   `json:"spinnaker_application"`
+	SpinnakerPipeline    string   `json:"spinnaker_pipeline"`
+	Statuses             []string `json:"statuses"`
+	StatusCheckTimeout   string   `json:"status_check_timeout"`
+	StatusCheckInterval  string   `json:"status_check_interval"`
+	X509Cert             string   `json:"spinnaker_x509_cert"`
+	X509Key              string   `json:"spinnaker_x509_key"`
 }
 
 type Version struct {
