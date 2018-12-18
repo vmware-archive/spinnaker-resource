@@ -1,10 +1,10 @@
 {
-  "application": "nvidia",
+  "application": "some-application",
   "authentication": {
     "allowedAccounts": [
       "my-kubernetes-account"
     ],
-    "user": "spincon"
+    "user": "some-user"
   },
   "buildTime": 1543414041348,
   "canceled": false,
@@ -102,7 +102,7 @@
     ],
     "strategy": false,
     "type": "concourse-resource",
-    "user": "spincon"
+    "user": "some-user"
   },
   "type": "PIPELINE"
 }
