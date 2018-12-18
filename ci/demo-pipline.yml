@@ -1,45 +1,18 @@
-groups:
-- name: trigger-on-build
-  jobs:
-  - unit
-  - build
-  - handoff-spinnaker
-  - run-acceptence
-- name: notify-on-failure
-  jobs:
-  - slack-notification
-resources:
-- name: slack-alert
-  type: slack-notification
-  source:
-    url: https://hooks.slack.com/services/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
-- name: booklit
-  type: git
-  source:
-    uri: https://github.com/vito/booklit
-- name: spinnaker-builder
-  type: spinnaker
-  source:
-    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
-    spinnaker_application: nvidia
-    spinnaker_pipeline: bar
-    spinnaker_x509_cert: ((spinnaker_x509_cert))
-    spinnaker_x509_key: ((spinnaker_x509_key))
-  check_every: 10s
-- name: spinnaker
-  type: spinnaker
-  source:
-    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
-    spinnaker_application: nvidia
-    spinnaker_pipeline: foo
-    spinnaker_x509_cert: ((spinnaker_x509_cert))
-    spinnaker_x509_key: ((spinnaker_x509_key))
-    statuses:
-    - TERMINAL
-  check_every: 10s
+groups: []
+# - name: trigger-on-build
+#   jobs:
+#   - unit
+#   - build
+#   - handoff-spinnaker
+#   - run-acceptence
+#   - delete-deployment
+# - name: notify-on-failure
+#   jobs:
+#   - slack-notification
+
 resource_types:
 - name: spinnaker
-  type: docker-image
+  type: registry-image
   source:
     repository: concourse/spinnaker-resource-dev
 - name: slack-notification
@@ -47,10 +20,72 @@ resource_types:
   source:
     repository: cfcommunity/slack-notification-resource
     tag: latest
+
+resources:
+- name: slack-alert
+  type: slack-notification
+  source:
+    url: https://hooks.slack.com/services/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
+
+- name: booklit
+  type: git
+  source:
+    uri: https://github.com/vito/booklit
+
+- name: spinnaker-deploy
+  type: spinnaker
+  source:
+    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
+    spinnaker_application: nvidia
+    spinnaker_pipeline: deploy
+    spinnaker_x509_cert: ((spinnaker_x509_cert))
+    spinnaker_x509_key: ((spinnaker_x509_key))
+    status_check_timeout: 2m
+    statuses:
+    - SUCCEEDED
+  check_every: 10s
+
+- name: spinnaker-destroy
+  type: spinnaker
+  source:
+    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
+    spinnaker_application: nvidia
+    spinnaker_pipeline: destroy
+    spinnaker_x509_cert: ((spinnaker_x509_cert))
+    spinnaker_x509_key: ((spinnaker_x509_key))
+    status_check_timeout: 2m
+    statuses:
+    - SUCCEEDED
+  check_every: 10s
+
+- name: spinnaker-prod-failing
+  type: spinnaker
+  source:
+    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
+    spinnaker_application: nvidia
+    spinnaker_pipeline: failing-pipeline
+    spinnaker_x509_cert: ((spinnaker_x509_cert))
+    spinnaker_x509_key: ((spinnaker_x509_key))
+    statuses:
+    - TERMINAL
+  check_every: 10s
+
+- name: spinnaker-deploy-prod
+  type: spinnaker
+  source:
+    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
+    spinnaker_application: nvidia
+    spinnaker_pipeline: failing-pipeline
+    spinnaker_x509_cert: ((spinnaker_x509_cert))
+    spinnaker_x509_key: ((spinnaker_x509_key))
+    statuses:
+    - SUCCEEDED
+  check_every: 10s
+
 jobs:
 - name: slack-notification
   plan:
-  - get: spinnaker
+  - get: spinnaker-prod-failing
     trigger: true
   - put: slack-alert
     params:
@@ -58,7 +93,7 @@ jobs:
       text: |
         spinnaker pipeline FAILED!
         Result: $TEXT_FILE_CONTENT
-      text_file: spinnaker/metadata.json
+      text_file: spinnaker-prod-failing/metadata.json
 - name: unit
   plan:
   - get: booklit
@@ -79,15 +114,36 @@ jobs:
     passed:
     - build
     trigger: true
-  - put: spinnaker-builder
+  - task: create-artifact
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: ubuntu
+          tag: xenial
+      outputs:
+      - name: my-docker-artifact
+      - name: my-dynamic-param
+      run:
+        path: /bin/bash
+        args:
+        - -ec
+        - |2
+          echo '[{"type": "docker/image","reference": "nginx","name": "nginx", "version": "tag:1.15.7"}]' > my-docker-artifact/artifact.json
+          echo '{"Date": "'$(date)'"}' > my-dynamic-param/params.json
+
+  - put: spinnaker-deploy
     params:
       trigger_params:
         atc_url: $ATC_EXTERNAL_URL
         build_id: $BUILD_ID
         build_job_name: $BUILD_JOB_NAME
+      trigger_params_json_file_path: my-dynamic-param/params.json
+      artifacts: my-docker-artifact/artifact.json
 - name: run-acceptence
   plan:
-  - get: spinnaker-builder
+  - get: spinnaker-deploy
     passed:
     - handoff-spinnaker
     trigger: true
@@ -105,11 +161,27 @@ jobs:
         - -ec
         - |2
 
-          apt-get update -qq && apt-get install -y jq > /tmp/out.txt 2> /tmp/err.txt
+          apt-get update -qq && apt-get install -y jq curl > /tmp/out.txt 2> /tmp/err.txt
           echo -e "Running acceptence\n"
           echo -e "Spinnaker pipeline: "
-          cat spinnaker-builder/version
+          cat spinnaker-deploy/version
           echo -e "\n\n spinnaker's manifest: \n"
-          cat spinnaker-builder/metadata.json | jq .
+          cat spinnaker-deploy/metadata.json | jq .
+          set -x
+          curl -I http://35.239.21.201/
       inputs:
-      - name: spinnaker-builder
+      - name: spinnaker-deploy
+- name: delete-deployment
+  plan:
+  - get: spinnaker-deploy
+    passed:
+    - run-acceptence
+    trigger: true
+  - put: spinnaker-destroy
+- name: deploy-prod
+  plan:
+  - get: spinnaker-destroy
+    passed:
+    - delete-deployment
+    trigger: true
+  - put: spinnaker-deploy-prod
