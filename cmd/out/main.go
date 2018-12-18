@@ -106,8 +106,8 @@ func parseDurationDefault(stringDuration, defaultDuration string) (time.Duration
 	}
 	return time.ParseDuration(stringDuration)
 }
+
 func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID string) error {
-	var statusReached bool
 
 	interval, err := parseDurationDefault(request.Source.StatusCheckInterval, defaultPollingInterval)
 	if err != nil {
@@ -119,35 +119,57 @@ func pollSpinnakerForStatus(request concourse.OutRequest, pipelineExecutionID st
 	}
 
 	concourse.Sayf("Poll Interval: %v, Timeout: %v\n", interval, timeout)
+
+	statusReached, err := pollForStatus(pipelineExecutionID, request.Source.Statuses)
+	if err != nil {
+		return err
+	}
+	if statusReached {
+		return nil
+	}
+
 	pollTicker := time.NewTicker(interval)
 	timeoutTicker := time.NewTicker(timeout)
+
 	for {
 		select {
-		case <-pollTicker.C:
-			rawPipeline, err := spinClient.GetPipelineExecution(pipelineExecutionID)
-			if err != nil {
-				concourse.Fatal("put step failed", err)
-			}
-			statusReached = checkStatus(rawPipeline["status"].(string), request.Source.Statuses)
 
-			//Intermediate statuses
+		case <-pollTicker.C:
+			statusReached, err := pollForStatus(pipelineExecutionID, request.Source.Statuses)
+			if err != nil {
+				return err
+			}
 			if statusReached {
-				concourse.Sayf("\n")
 				return nil
 			}
-			status := rawPipeline["status"].(string)
-			if status != "RUNNING" && status != "NOT_STARTED" && status != "BUFFERED" {
-				concourse.Sayf("\n")
-				return fmt.Errorf("Pipeline execution reached a final state: %s", status)
-			}
-			concourse.Sayf(".")
-
 		case <-timeoutTicker.C:
 			concourse.Sayf("\n")
 			return fmt.Errorf("timed out waiting for configured status(es)")
 		}
 	}
 
+}
+
+func pollForStatus(pipelineExecutionID string, statuses []string) (bool, error) {
+	var statusReached bool
+	rawPipeline, err := spinClient.GetPipelineExecution(pipelineExecutionID)
+	if err != nil {
+		return false, err
+	}
+	statusReached = checkStatus(rawPipeline["status"].(string), statuses)
+
+	//Intermediate statuses
+	if statusReached {
+		concourse.Sayf("\n")
+		return true, nil
+	}
+	status := rawPipeline["status"].(string)
+	if status != "RUNNING" && status != "NOT_STARTED" && status != "BUFFERED" {
+		concourse.Sayf("\n")
+		return false, fmt.Errorf("Pipeline execution reached a final state: %s", status)
+	}
+	concourse.Sayf(".")
+	return false, nil
 }
 
 func writeSuccessfulResponse(pipelineExecutionID string) {
