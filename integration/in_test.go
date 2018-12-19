@@ -147,7 +147,7 @@ var _ = Describe("In", func() {
 			expArr := []concourse.InResponseMetadata{
 				concourse.InResponseMetadata{
 					Name:  "Application Name",
-					Value: "nvidia",
+					Value: "some-application",
 				},
 				concourse.InResponseMetadata{
 					Name:  "Pipeline Name",
