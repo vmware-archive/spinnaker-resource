@@ -10,7 +10,8 @@ resources:
 - name: docker-hub
   type: docker-image
   source:
-    repository: concourse/spinnaker-resource-dev
+    repository: concourse/spinnaker-resource
+    tag: 0.0.1
     username: ((docker.username))
     password: ((docker.password))
 
@@ -42,6 +43,7 @@ jobs:
         save: true
   - put: docker-hub
     params:
+      tag_as_latest: true
       build: source-code
       load_bases:
       - golang-alpine

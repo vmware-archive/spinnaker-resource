@@ -4,9 +4,10 @@ resource_types:
 - name: spinnaker
   type: registry-image
   source:
-    repository: concourse/spinnaker-resource-dev
+    repository: concourse/spinnaker-resource
+    tag: 0.0.1
 - name: slack-notification
-  type: docker-image
+  type: registry-image
   source:
     repository: cfcommunity/slack-notification-resource
     tag: latest
@@ -15,7 +16,7 @@ resources:
 - name: slack-alert
   type: slack-notification
   source:
-    url: https://hooks.slack.com/services/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
+    url: ((slack-hook-url))
 
 - name: booklit
   type: git
@@ -25,8 +26,8 @@ resources:
 - name: spinnaker-deploy
   type: spinnaker
   source:
-    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
-    spinnaker_application: nvidia
+    spinnaker_api: ((spinnaker-api))
+    spinnaker_application: ((spinnaker-application))
     spinnaker_pipeline: deploy
     spinnaker_x509_cert: ((spinnaker_x509_cert))
     spinnaker_x509_key: ((spinnaker_x509_key))
@@ -38,8 +39,8 @@ resources:
 - name: spinnaker-destroy
   type: spinnaker
   source:
-    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
-    spinnaker_application: nvidia
+    spinnaker_api: ((spinnaker-api))
+    spinnaker_application: ((spinnaker-application))
     spinnaker_pipeline: destroy
     spinnaker_x509_cert: ((spinnaker_x509_cert))
     spinnaker_x509_key: ((spinnaker_x509_key))
@@ -51,8 +52,8 @@ resources:
 - name: spinnaker-prod-failing
   type: spinnaker
   source:
-    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
-    spinnaker_application: nvidia
+    spinnaker_api: ((spinnaker-api))
+    spinnaker_application: ((spinnaker-application))
     spinnaker_pipeline: failing-pipeline
     spinnaker_x509_cert: ((spinnaker_x509_cert))
     spinnaker_x509_key: ((spinnaker_x509_key))
@@ -63,8 +64,8 @@ resources:
 - name: spinnaker-deploy-prod
   type: spinnaker
   source:
-    spinnaker_api: https://api.spincon.ci.cf-app.com:8085
-    spinnaker_application: nvidia
+    spinnaker_api: ((spinnaker-api))
+    spinnaker_application: ((spinnaker-application))
     spinnaker_pipeline: failing-pipeline
     spinnaker_x509_cert: ((spinnaker_x509_cert))
     spinnaker_x509_key: ((spinnaker_x509_key))

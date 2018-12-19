@@ -30,9 +30,9 @@ type MetadataPair struct {
 }
 
 type OutParams struct {
-	TriggerParams             map[string]string `json:"trigger_params,omitempty"`      // optional
-	Artifacts                 string            `json:"artifacts"`                     // optional
-	TriggerParamsJSONFilePath string            `json:"trigger_params_json_file_path"` //optional
+	TriggerParams             map[string]string `json:"trigger_params,omitempty"` // optional
+	Artifacts                 string            `json:"artifacts_json_file"`      // optional
+	TriggerParamsJSONFilePath string            `json:"trigger_params_json_file"` //optional
 }
 
 type CheckRequest struct {
