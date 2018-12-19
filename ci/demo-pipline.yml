@@ -1,14 +1,4 @@
 groups: []
-# - name: trigger-on-build
-#   jobs:
-#   - unit
-#   - build
-#   - handoff-spinnaker
-#   - run-acceptence
-#   - delete-deployment
-# - name: notify-on-failure
-#   jobs:
-#   - slack-notification
 
 resource_types:
 - name: spinnaker
