@@ -5,14 +5,20 @@ resources:
   source:
     uri: git@github.com:pivotal-cf/spinnaker-resource.git
     branch: develop
-    private_key: ((ssh_key))
+    private_key: ((private_key))
 
 - name: docker-hub
   type: docker-image
   source:
-    repository: concourse/concourse-spinnaker-resource
+    repository: concourse/spinnaker-resource-dev
     username: ((docker.username))
     password: ((docker.password))
+
+- name: golang-alpine
+  type: docker-image
+  source:
+    repository: golang
+    tag: alpine
 
 - name: ubuntu-bionic
   type: docker-image
@@ -30,7 +36,13 @@ jobs:
       trigger: true
       params:
         save: true
+    - get: golang-alpine
+      trigger: true
+      params:
+        save: true
   - put: docker-hub
     params:
       build: source-code
-      load_base: ubuntu-bionic
+      load_bases:
+      - golang-alpine
+      - ubuntu-bionic
