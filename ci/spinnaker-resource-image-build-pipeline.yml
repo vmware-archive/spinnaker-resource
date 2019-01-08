@@ -1,10 +1,16 @@
 ---
+resource_types:
+- name: docker-image
+  type: registry-image
+  source:
+    repository: concourse/docker-image-resource
+  privileged: true
 resources:
 - name: source-code
   type: git
   source:
     uri: git@github.com:pivotal-cf/spinnaker-resource.git
-    branch: develop
+    branch: master
     private_key: ((private_key))
 
 - name: docker-hub
