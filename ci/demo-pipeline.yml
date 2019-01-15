@@ -130,8 +130,8 @@ jobs:
         atc_url: $ATC_EXTERNAL_URL
         build_id: $BUILD_ID
         build_job_name: $BUILD_JOB_NAME
-      trigger_params_json_file_path: my-dynamic-param/params.json
-      artifacts: my-docker-artifact/artifact.json
+      trigger_params_json_file: my-dynamic-param/params.json
+      artifacts_json_file: my-docker-artifact/artifact.json
 - name: run-acceptence
   plan:
   - get: spinnaker-deploy
