@@ -54,6 +54,7 @@ func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, er
 	TriggerParamsMap := triggerParamsBase
 
 	triggerParams := map[string]string{}
+	triggerParams["build url"] = getBuildUrlFromEnv()
 	if len(request.Params.TriggerParams) > 0 {
 		for key, value := range request.Params.TriggerParams {
 			triggerParams[key] = os.ExpandEnv(value)
@@ -98,6 +99,10 @@ func invokePipeline(sourcesDir string, request concourse.OutRequest) (string, er
 		return "", err
 	}
 	return pipelineExecution.ID, nil
+}
+
+func getBuildUrlFromEnv() string {
+	return os.Getenv("ATC_EXTERNAL_URL") + "/teams/" + os.Getenv("BUILD_TEAM_NAME") + "/pipelines/" + os.Getenv("BUILD_PIPELINE_NAME") + "/jobs/" + os.Getenv("BUILD_JOB_NAME") + "/builds/" + os.Getenv("BUILD_NAME")
 }
 
 func parseDurationDefault(stringDuration, defaultDuration string) (time.Duration, error) {

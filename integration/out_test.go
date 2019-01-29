@@ -118,7 +118,7 @@ var _ = Describe("Out", func() {
 
 		Context("when artifacts are defined", func() {
 			BeforeEach(func() {
-				postBody := `{"type":"concourse-resource","artifacts":[{"foo":"bar"}]}`
+				postBody := `{"type":"concourse-resource","artifacts":[{"foo":"bar"}],"parameters":{"build url": "/teams//pipelines//jobs//builds/"}}`
 				httpPOSTSuccessHandler = ghttp.CombineHandlers(
 					ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
 					ghttp.VerifyJSON(postBody),
@@ -161,7 +161,7 @@ var _ = Describe("Out", func() {
 
 		Context("when json file trigger params are defined", func() {
 			BeforeEach(func() {
-				postBody := `{"type":"concourse-resource","parameters":{"foo":"bar", "foobar": "bazbar"}}`
+				postBody := `{"type":"concourse-resource","parameters":{"build url": "/teams//pipelines//jobs//builds/", "foo":"bar", "foobar": "bazbar"}}`
 				httpPOSTSuccessHandler = ghttp.CombineHandlers(
 					ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
 					ghttp.VerifyJSON(postBody),
@@ -203,7 +203,7 @@ var _ = Describe("Out", func() {
 
 		Context("when trigger params are defined", func() {
 			BeforeEach(func() {
-				postBody := `{"type":"concourse-resource","parameters":{"foo":"bar", "foobar": "bazbar"}}`
+				postBody := `{"type":"concourse-resource","parameters":{"build url":"https://wings.pivotal.io/teams/cf-spinnaker/pipelines/spinnaker-demo/jobs/handoff-spinnaker/builds/47", "foo":"bar", "foobar": "bazbar"}}`
 				httpPOSTSuccessHandler = ghttp.CombineHandlers(
 					ghttp.VerifyRequest("POST", MatchRegexp(".*/pipelines/"+inputSource.SpinnakerApplication+"/"+pipelineName+".*")),
 					ghttp.VerifyJSON(postBody),
@@ -226,7 +226,14 @@ var _ = Describe("Out", func() {
 
 			It("calls Spinnaker API with the trigger params in the post body", func() {
 				cmd := exec.Command(outPath, "")
-				cmd.Env = []string{"BAZ=bazbar"}
+				cmd.Env = []string{
+					"BAZ=bazbar",
+					"ATC_EXTERNAL_URL=https://wings.pivotal.io",
+					"BUILD_PIPELINE_NAME=spinnaker-demo",
+					"BUILD_TEAM_NAME=cf-spinnaker",
+					"BUILD_JOB_NAME=handoff-spinnaker",
+					"BUILD_NAME=47",
+				}
 				cmd.Stdin = bytes.NewBuffer(marshalledInput)
 				outSess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
