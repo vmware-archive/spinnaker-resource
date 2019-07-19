@@ -11,8 +11,11 @@
 - `spinnaker_api`: *Required* the url of the Spinnaker api microservice.
 - `spinnaker_application`: *Required* The Spinnaker application you would like to trigger.
 - `spinnaker_pipeline`: *Required* The Spinnaker pipeline you would like to trigger.
-- `client_x509_cert`: *Required* Client [certificate](https://www.spinnaker.io/setup/security/authentication/x509/) to authenticate with Spinnaker.
-- `client_x509_key`: *Required* Client [key](https://www.spinnaker.io/setup/security/authentication/x509/) to authenticate with Spinnaker.
+- `auth_method`: *Required* Supports "x509" or "ldap"
+- `client_x509_cert`: *Required* when `auth_method` is "x509". Client [certificate](https://www.spinnaker.io/setup/security/authentication/x509/) to authenticate with Spinnaker.
+- `client_x509_key`: *Required* when `auth_method` is "x509". Client [key](https://www.spinnaker.io/setup/security/authentication/x509/) to authenticate with Spinnaker.
+- `ldap_username`: *Required* when `auth_method` is "ldap".
+- `ldap_password`: *Required* when `auth_method` is "ldap".
 - `statuses`: *Optional* Array of Spinnaker pipeline execution statuses. Currently supported statuses by Spinnaker: [NOT_STARTED, RUNNING, PAUSED, SUSPENDED, SUCCEEDED, FAILED_CONTINUE, TERMINAL, CANCELED, REDIRECT, STOPPED, SKIPPED, BUFFERED] - [Reference](https://github.com/spinnaker/gate/blob/1cb00104f925e484d7a7a333bf07bd149adb0464/gate-web/src/main/groovy/com/netflix/spinnaker/gate/controllers/ExecutionsController.java#L82).
    - if specified, the status will be used to filter the pipeline execution statuses when detecting new versions during the `check` step.
    - if specified ,the `put` step will block until the specified status(es) is reached.

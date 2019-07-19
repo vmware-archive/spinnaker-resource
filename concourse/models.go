@@ -16,8 +16,11 @@ type Source struct {
 	Statuses             []string `json:"statuses"`
 	StatusCheckTimeout   string   `json:"status_check_timeout"`
 	StatusCheckInterval  string   `json:"status_check_interval"`
+	AuthMethod           string   `json:"auth_method"`
 	X509Cert             string   `json:"spinnaker_x509_cert"`
 	X509Key              string   `json:"spinnaker_x509_key"`
+	LdapUsername         string   `json:"spinnaker_ldap_username"`
+	LdapPassword         string   `json:"spinnaker_ldap_password"`
 }
 
 type Version struct {

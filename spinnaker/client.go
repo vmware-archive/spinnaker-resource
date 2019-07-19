@@ -11,7 +11,6 @@ package spinnaker
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,24 +27,19 @@ type SpinClient struct {
 
 func NewClient(source concourse.Source) (SpinClient, error) {
 
-	cert, err := tls.X509KeyPair([]byte(source.X509Cert), []byte(source.X509Key))
+	var authClient AuthHttpClient
+	if strings.EqualFold(source.AuthMethod, "ldap") {
+		authClient = NewLdapAuthClient(source.LdapUsername, source.LdapPassword)
+	} else if strings.EqualFold(source.AuthMethod, "x509") {
+		authClient = NewX509AuthClient(source.X509Cert, source.X509Key)
+	} else {
+		return SpinClient{}, fmt.Errorf("auth_method must be set")
+	}
 
+	client, err := authClient.GetClient(source.SpinnakerAPI)
 	if err != nil {
 		return SpinClient{}, err
 	}
-	tlsConfig := &tls.Config{
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		Certificates:             []tls.Certificate{cert},
-		//TODO Do something!!
-		InsecureSkipVerify: true,
-	}
-
-	tr := &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
-
-	client := &http.Client{Transport: tr}
 
 	res, err := client.Get(fmt.Sprintf("%s/applications/%s", source.SpinnakerAPI, source.SpinnakerApplication))
 	if err != nil {
