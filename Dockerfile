@@ -11,10 +11,11 @@ FROM golang:alpine as builder
 
 LABEL Maintainer="Pivotal Software, Inc."
 
-COPY . /spinnaker-resource
-WORKDIR /spinnaker-resource
 ENV CGO_ENABLED 0
 RUN apk add --update git gcc
+
+COPY . /spinnaker-resource
+WORKDIR /spinnaker-resource
 
 RUN go build -o /assets/check cmd/check/main.go
 RUN go build -o /assets/in cmd/in/main.go
