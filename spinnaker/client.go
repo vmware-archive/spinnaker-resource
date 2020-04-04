@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/pivotal-cf/spinnaker-resource/concourse"
@@ -193,4 +194,20 @@ func (c *SpinClient) InvokePipelineExecution(body []byte) (PipelineExecution, er
 		pipelineExecution.ID = strings.Split(Data["ref"].(string), "/")[2]
 		return pipelineExecution, nil
 	}
+}
+
+func (c *SpinClient) NotifyConcourseExecution(stageId string) error {
+
+	url := fmt.Sprintf("%s/concourse/stage/start?stageId=%s&job=%s&buildNumber=%s", c.sourceConfig.SpinnakerAPI, stageId, os.Getenv("BUILD_JOB_NAME"), os.Getenv("BUILD_NAME"))
+
+	if response, err := c.client.Post(url, "application/json", bytes.NewBuffer([]byte(""))); err != nil {
+		return err
+	} else if response.StatusCode >= 400 {
+		body, err := ioutil.ReadAll(response.Body)
+		if err == nil {
+			err = fmt.Errorf("spinnaker api responded with status code: %d, body: %s", response.StatusCode, string(body))
+		}
+		return err
+	}
+	return nil
 }

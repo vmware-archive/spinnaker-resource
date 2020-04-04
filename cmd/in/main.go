@@ -49,6 +49,18 @@ func main() {
 		concourse.Fatal("get step failed", err)
 	}
 
+	var stageId string
+	for _, stage := range metaData.Stages {
+		if stage.Type == "concourse" {
+			stageId = stage.ID
+			break
+		}
+	}
+
+	if stageId == "" {
+		concourse.Fatal("Concourse stage not found", nil)
+	}
+
 	resArr := []concourse.InResponseMetadata{
 		concourse.InResponseMetadata{
 			Name:  "Application Name",
@@ -70,11 +82,20 @@ func main() {
 			Name:  "End time",
 			Value: time.Unix(metaData.EndTime/1000, 0).Format(time.UnixDate),
 		},
+		concourse.InResponseMetadata{
+			Name:  "Stage Id",
+			Value: stageId,
+		},
 	}
 
 	InResponse := concourse.InResponse{
 		Version:  request.Version,
 		Metadata: resArr,
+	}
+
+	err = spinClient.NotifyConcourseExecution(stageId)
+	if err != nil {
+		concourse.Fatal("Notify Concourse Execution failed", err)
 	}
 
 	concourse.WriteResponse(InResponse)

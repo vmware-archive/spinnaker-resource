@@ -67,6 +67,11 @@ type IntermediateMetadata struct {
 	StartTime       int64  `json:"startTime"`
 	EndTime         int64  `json:"endTime"`
 	Status          string `json:"status"`
+	Stages          []struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+		Name string `json:"name"`
+	}
 }
 
 type InResponse struct {
